@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+
+description = """
+Utility program for the calculation of homological properties from NetCDF atmospheric simulation data.
+
+Example usage: TODO
+
+"""
+
+if __name__ == "__main__":
+    print "Main module, exiting."
