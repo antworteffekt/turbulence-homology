@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from homology import extract
+
 description = """
 Utility program for the extraction of data from NetCDF files and conversion to
 numpy arrays.
