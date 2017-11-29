@@ -19,5 +19,4 @@ var/
 .installed.cfg
 *.egg
 
-
-
+etc/
