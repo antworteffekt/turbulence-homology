@@ -69,22 +69,28 @@ class UnionFind:
         self.objects_to_num = {}
         self.__repr__ = self.__str__
 
-    def insert_objects(self, objects):
+    def insert_objects(self, objects, **kwargs):
         '''
         Insert a sequence of objects into the structure.  All must be Python hashable.
         '''
+        # print "INSERT objects: %s" % str(objects)
         for object in objects:
-            self.find(object)
+            self.find(object, **kwargs)
 
-    def find(self, object):
+    def find(self, object, **kwargs):
         '''
         Find the root of the set that an object is in.
         If the object was not known, will make it known, and it becomes its own set.
         Object must be Python hashable.
         '''
+        # print "FIND object: %s" % str(object)
+        value = kwargs.get('value', 1)
+        # print "FIND input -- %s" % str(x)
+        
         if object not in self.objects_to_num:
+            # print "object value %s" % str(value)
             obj_num = len(self.objects_to_num)
-            self.num_weights[obj_num] = 1
+            self.num_weights[obj_num] = value
             self.objects_to_num[object] = obj_num
             self.num_to_objects[obj_num] = object
             self.parent_pointers[obj_num] = obj_num
@@ -104,6 +110,7 @@ class UnionFind:
         Both objects must be Python hashable.
         If either or both objects are unknown, will make them known, and combine them.
         '''
+        # print "entering UNION..."
         o1p = self.find(object1)
         o2p = self.find(object2)
         if o1p != o2p:
@@ -112,7 +119,7 @@ class UnionFind:
             if elder_rule:
                 w1 = self.num_weights[on1]
                 w2 = self.num_weights[on2]
-                if o2p < o1p:
+                if on2 < on1:
                     o1p, o2p, on1, on2, w1, w2 = o2p, o1p, on2, on1, w2, w1
             else:
                 w1 = self.num_weights[on1]
