@@ -4,6 +4,7 @@ import numpy as np
 from homology.util.unionfind import UnionFind
 import matplotlib.pyplot as plt
 
+import pprint
 
 class MergeTree(object):
 
@@ -14,7 +15,7 @@ class MergeTree(object):
         self.mergers = {}
         self.dimension = 0
 
-    def build_merge_tree(self, X, iter_dim=0, flip=False):
+    def build_merge_tree(self, X, iter_dim=0, flip=False, **kwargs):
         """
         Given a two-dimensional array with binarized data, builds a union-find
         data structure incrementally by iterating over the specified dimension
@@ -23,10 +24,10 @@ class MergeTree(object):
         """
 
         # Assume X is not binarized yet, do it in here:
-        tol = 0.01
+        tol = kwargs.get('tol', 0.01)
         X_bin = X > tol
         # X_bin = X
-        # print "X binarized, yay"
+        # print "X binarized"
 
         it = np.nditer(X_bin, flags=['multi_index'])
         self.dimension = 2
@@ -67,23 +68,32 @@ class MergeTree(object):
 
             it.iternext()
             if it.finished or it.multi_index[0] != current_level:
-                # print "Level %d finished, processing with weights:"  % current_level
+                # print "Level %d finished, processing with weights:" % current_level
                 # print self.uf.num_weights
+                # print "%d components" % len(self.uf.num_weights)
+                # print self.uf.parent_pointers
                 # print "Level %d" % current_level
                 # print "Joins to be made" 
-                # print below_joins
+                # pprint.pprint(below_joins)
                 for level_parent, below_parent in below_joins.iteritems():
                     # print k, d, len(set(d))
                     # print level_parent
                     # print below_parent
                     if len(set(below_parent)) > 1:
                         # Get the roots for the objects below
+                        # print "*** Joining group rooted at %s ***" % str(level_parent)
                         roots_below = list(set(below_parent))
-                        id_roots_below = [self.uf.objects_to_num[x] for x in roots_below]
+                        # Use the find method on the objects first, in case one of the 
+                        # roots has already been merged before.
+                        id_roots_below = [self.uf.find(x) for x in roots_below]
+                        id_roots_below = [self.uf.objects_to_num[x] for x in id_roots_below]
                         # print "Roots below: %s" % str(list(set(below_parent)))
                         # print "Ids : %s" % str(id_roots_below)
                         # 0th element is at once previous and maximum
+                        # print "Weights before union:"
+                        # print self.uf.num_weights
                         max_root_id = id_roots_below[0]
+                        # print "Max root parent: %s" % str(self.uf.find(roots_below[0]))
                         # print "Value at position 0, current maximum: %f" % self.uf.num_weights[roots_below[0]]
                         iter_roots = iter(id_roots_below)
                         next(iter_roots)
@@ -91,6 +101,12 @@ class MergeTree(object):
                             # print "Value at next position: %f" % self.uf.num_weights[root]
                             # print "Prev: %s" % str(prev)
                             # print "Curr: %s" % str(root)
+                            # print "Current root: %s" % str(self.uf.num_to_objects[id_root])
+                            # print "Current root parent: %s" % str(self.uf.find(self.uf.num_to_objects[id_root]))
+                            # print "max root id: %d" % max_root_id
+                            # print "value: %f" % self.uf.num_weights[max_root_id]
+                            # print "id root --- %d" % id_root
+                            # print "value: %f" % self.uf.num_weights[id_root]
                             if self.uf.num_weights[max_root_id] < self.uf.num_weights[id_root]:
                                 max_root_id = id_root
 
@@ -100,14 +116,22 @@ class MergeTree(object):
                         # Join current level group with the maximally valued root
                         max_root = self.uf.num_to_objects[max_root_id]
                         # print "Root with maximum value found --- %d : %s" % (max_root_id, str(max_root))
+
                         # print "Maximum value: %f" % self.uf.num_weights[max_root_id]
                         self.uf.union(level_parent, max_root, elder_rule=True)
+                        # print "Weights after union:"
+                        # print self.uf.num_weights
+
                         # Join the other non-maximally valued roots:
                         # print "Below parents: %s" % str(roots_below)
                         missing_roots = [root for root in roots_below if root != max_root]
                         # print "Missing roots: %s" % str(missing_roots)
                         for root in missing_roots:
+                            # print "Joining root %s : %d with maximum %s : %d" % (str(root), self.uf.objects_to_num[root], str(max_root), max_root_id)
                             self.uf.union(max_root, root)
+                        # print "Weights after union of remaining roots:"
+                        # print self.uf.num_weights
+                        # print "\n"
                         # print "After union ... %s" % str(self.uf.find(level_parent))
                     else:  # there is just one root below
                         # print "*** There is just one root below"
@@ -118,7 +142,8 @@ class MergeTree(object):
                         # print "After union ... %s" % str(self.uf.find(level_parent))
                         # pass
 
-                # print "%d total objects to be joined below\n" % len(below_joins)
+                    # print "Weights after merging, etc. (%d components):" % len(self.uf.num_weights) 
+                    # print self.uf.num_weights
 
                 level_coords = [x for x in self.uf.objects_to_num.keys() if x[0] == current_level]
                 self.levels_components[current_level] = set([self.uf.find(x) for x in level_coords])
