@@ -3,6 +3,7 @@
 import numpy as np
 from homology.util.unionfind import UnionFind
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 import pprint
 
@@ -40,6 +41,18 @@ class MergeTree(object):
                 # print X[it.multi_index]
                 # self.uf.insert_objects([it.multi_index])
 
+                # Special case: level 0. Here we must assign roots manually, to
+                # accurately determine the location of the maximum values.
+                # if current_level == 0:
+                #     print self.uf.parent_pointers
+                #     print "Level 0"
+                #     cells = defaultdict(list)
+                #     for k, v in self.uf.parent_pointers.iteritems():
+                #         cells[v].append(k)
+                #     # tmp_cmp = {}
+                #     print cells
+                        # pass
+                
                 # Pass both the array coordinates and the array value to find
                 self.uf.insert_objects([it.multi_index], value=X[it.multi_index])
 
@@ -47,7 +60,7 @@ class MergeTree(object):
                 # we assume a two-dimensional array structure
                 behind = map(lambda x, y: x + y, it.multi_index, (0, -1))
                 if not any(n < 0 for n in behind) and X_bin[tuple(behind)]:
-                    self.uf.union(it.multi_index, tuple(behind), elder_rule=True)
+                    self.uf.union(it.multi_index, tuple(behind), elder_rule=False)
 
                 below = map(lambda x, y: x + y, it.multi_index, (-1, 0))
                 if not any(n < 0 for n in below) and X_bin[tuple(below)]:
@@ -128,7 +141,7 @@ class MergeTree(object):
                         # print "Missing roots: %s" % str(missing_roots)
                         for root in missing_roots:
                             # print "Joining root %s : %d with maximum %s : %d" % (str(root), self.uf.objects_to_num[root], str(max_root), max_root_id)
-                            self.uf.union(max_root, root)
+                            self.uf.union(max_root, root, elder_rule=True)
                         # print "Weights after union of remaining roots:"
                         # print self.uf.num_weights
                         # print "\n"
