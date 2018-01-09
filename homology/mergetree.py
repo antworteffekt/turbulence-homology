@@ -359,6 +359,7 @@ class MergeTree(object):
             ax.vlines(k[1], d[0], d[0] + 1)
             ax.plot(d[1][1], d[0] + 1, 'r.')
         # ax.invert_xaxis()
-        fig.show()
+        return fig, ax
+        # fig.show()
 
     # def _binarize_array(self, X, tol=0.01):

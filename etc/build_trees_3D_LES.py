@@ -14,7 +14,7 @@ out_dir = '/media/licon/1650BDF550BDDBA54/mergetrees/3d/vertical_velocity/SP1/'
 threshold = 0.01
 
 # Timestep range to process
-t_range = np.arange(100, 200)
+t_range = np.arange(300, 400)
 
 for t in t_range:
     print "Timestep %d" % t
