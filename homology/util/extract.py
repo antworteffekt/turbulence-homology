@@ -2,36 +2,47 @@
 
 import numpy as np
 from netCDF4 import Dataset
-# import scipy.io
+from itertools import islice
+import re
 
-# TODO: make this command line parameter
-in_file_name = '/media/licon/1650BDF550BDDBA52/Data02/wrfout_d01_2010-04-13_12.nc'
-OUT_DIR = 'data/data02/'
+def persistence_intervals_to_array(filename):
+    # Given a Ripser output file, create a numpy array with the corresnpoding persistence intervals per dim.
+    pi_arrays = {}
 
-full_dataset = Dataset(in_file_name, 'r')
-# for k, d in full_dataset.variables.iteritems():
-#     print k, d, '*' * 50 
-variables = {
-    'T': 'temperature',
-    'QVAPOR': 'qvapor',
-    'Q2': 'q2',
-    'U': 'u',
-    'V': 'v',
-    'W': 'w'
-}
+    with open(filename, 'r') as f:
+        pi_str = f.read()
+        pi_str = pi_str.split('\n')
+        # Assume the line with value range is always in position 2
+        value_range = pi_str[2]
+        assert value_range.startswith('value range:')
+        max_value = value_range.split(',')[1][:-1]
 
-# choose variables of interest - here I assume they contain the full 4 dimensions
-temperature = atmosphere.variables['T'][:,:,:,:]
-qvapor = atmosphere.variables['QVAPOR'][:,:,:,:]
-q2 = atmosphere.variables['Q2'][:,:,:] # humidity at height 2 exactly
-u = atmosphere.variables['U'][:,:,:,:] # x-component of wind
-v = atmosphere.variables['V'][:,:,:,:] # y-component of wind
-w = atmosphere.variables['W'][:,:,:,:] # z-component of wind
+        dim_strings = [s for s in pi_str if s.startswith('persistence intervals in dim')]
+        dim_idx = [pi_str.index(s) for s in dim_strings]
+        # Add the index for last position in list
+        dim_idx.append(-1)
+        # print pi_str
 
-# choose variables of interest - here I assume they contain the full 4 dimensions
-temperature = atmosphere.variables['T'][:,:,:,:]
-qvapor = atmosphere.variables['QVAPOR'][:,:,:,:]
-q2 = atmosphere.variables['Q2'][:,:,:] # humidity at height 2 exactly
-u = atmosphere.variables['U'][:,:,:,:] # x-component of wind
-v = atmosphere.variables['V'][:,:,:,:] # y-component of wind
-w = atmosphere.variables['W'][:,:,:,:] # z-component of wind
+        for i in range(1, len(dim_idx)):
+            
+            intervals = pi_str[dim_idx[i-1]:dim_idx[i]]
+            identifier = intervals.pop(0).replace(':', '')
+
+            # Infinite intervals ????
+            # intervals = map(lambda x: x.replace(", )", ", %s)" % max_value), intervals)
+            # TODO: deal with infinite intervals without removing them, e.g. by re-adding them after 
+            # conversion to array, with the maximum of the array created (not of entire range)
+            intervals = [s for s in intervals if not s.endswith(', )')]
+
+            # Remove brackets
+            intervals = map(lambda x: x.replace('[', ''), intervals)
+            intervals = map(lambda x: x[:-1], intervals)
+            intervals = np.array([np.fromstring(x, sep=',') for x in intervals])
+            
+            pi_arrays[identifier] = intervals
+    
+    return pi_arrays
+
+
+
+

@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 from mpl_toolkits.axes_grid1 import AxesGrid
+from collections import OrderedDict
 
 def persistence_diagram(file_name, n_steps=None):
 
@@ -51,6 +52,49 @@ def persistence_diagram(file_name, n_steps=None):
 
     return fig
 
+def plot_barcodes(intervals, figsize=(12, 12)):
+    # Requires an array as produced by extract.persistence_intervals_to_array
+    # figsize=kwargs.get('figsize', (12, 12))
+    fig = plt.figure(figsize=figsize)
+    ax = plt.axes()
+    ax.set_ylim((-5, intervals.shape[0] + 5))
+    ax.set_xlim((0, np.amax(intervals)))
+    i = 0
+    for interval in intervals:
+        plt.plot((interval[0], interval[1]), (i, i), 'b-')
+        i += 1
+    plt.show()
+
+def plot_barcodes_h0_h1(intervals, figsize=(12, 12)):
+    # Requires a dict of arrays as produced by extract.persistence_intervals_to_array
+    colors = ['tab:green', 'tab:red', 'tab:purple', 'tab:blue', 'tab:orange']
+    fig = plt.figure(figsize=figsize)
+    ax = plt.axes()
+
+    n_intervals = sum([x.shape[0] for x in intervals.values()])
+    max_value = max([np.amax(x) for x in intervals.values()])
+
+    ax.set_ylim((-5, n_intervals + 1))
+    ax.set_xlim((0, max_value))
+
+    idx = 0
+    c = 0
+    for k, d in intervals.iteritems():
+        identifier = k.split('intervals in ')[1]
+        for interval in d:
+            # print interval
+            plt.plot((interval[0], interval[1]), (idx, idx), color=colors[c], linestyle='solid',
+                     label=identifier)
+            # plt.plot((interval[0], interval[1]), (i, i),  linestyle='solid')
+            idx += 1
+        c += 1
+    # The following lines remove all duplicate values in handles and labels before passing them to legend()
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys())
+    plt.show()
+
+    
 
 def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
     '''

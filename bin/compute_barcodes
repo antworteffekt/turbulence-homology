@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+import numpy as np
+from netCDF4 import Dataset
+import subprocess
+import os
+
+names = ['20130401_imicro2', '20130716_imicro2', '20130717_imicro2', '20140717_imicro2']
+
+for simulation in names:
+    # Directory with point cloud files
+    points_directory = '/home/licon/uni-koeln/persistence/pointcloud_data_DALES/samples/%s' % simulation
+    # Where to save the PI files
+    output_directory = '/home/licon/uni-koeln/persistence/pointcloud_data_DALES/barcodes/%s' % simulation
+    # Location of Ripser binary
+    ripser_bin = '/usr/local/bin/ripser/ripser'
+
+    filelist = [f for f in os.listdir(points_directory) if f.startswith('clouds_')]
+    for f in filelist:
+
+        fname_in = '%s/%s' % (points_directory, f)
+        # print fname_in
+
+        fname_out = '%s/PI_%s' % (output_directory, f)
+        # print fname_out 
+
+        with open(fname_out, 'w') as outfile:
+            args = ('%s --format point-cloud %s' % (ripser_bin, fname_in)).split()
+            p = subprocess.Popen(args, stdout=outfile)

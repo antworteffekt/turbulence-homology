@@ -81,20 +81,22 @@ def _binarize_array(original_data, threshold):
     return X
 
 
-def vertical_profiles(filename, variable, z_dim_name, t_dim_name, **kwargs):
+def vertical_profiles(filename, variable, out_dir, z_dim_name, t_dim_name, **kwargs):
     dataset_full = Dataset(filename, 'r')
     dataset = dataset_full[variable]
     z_range = dataset.shape[dataset.dimensions.index(z_dim_name)]
     t_range = dataset.shape[dataset.dimensions.index(t_dim_name)]
+    # t_range = 20
 
     start_time = time.time()
 
-    # profiles_0_pos = np.zeros((t_range, z_range))
-    # profiles_1_pos = np.zeros((t_range, z_range))
-    profiles_0_neg = np.zeros((t_range, z_range))
-    profiles_1_neg = np.zeros((t_range, z_range))
+    profiles_0_pos = np.zeros((t_range, z_range))
+    profiles_1_pos = np.zeros((t_range, z_range))
+    # profiles_0_neg = np.zeros((t_range, z_range))
+    # profiles_1_neg = np.zeros((t_range, z_range))
 
     threshold = kwargs.get('threshold', 0)
+    out_fname = out_dir + 'tmp.txt'
 
     for t in range(t_range):
         print "Timestep %d" % t
@@ -104,25 +106,25 @@ def vertical_profiles(filename, variable, z_dim_name, t_dim_name, **kwargs):
             X = _binarize_array(X, threshold=threshold)
 
             # "positive" domain: X == 1
-            # write_cubes(X, 'out/cubes/tmp.txt', pos_value=1)
-            # betti = calculate_betti_numbers('out/cubes/tmp.txt')
-            # if betti is not None:
-            #     profiles_0_pos[t, z] = betti[0]
-            #     profiles_1_pos[t, z] = betti[1]
+            write_cubes(X, out_fname, pos_value=1)
+            betti = calculate_betti_numbers(out_fname)
+            if betti is not None:
+                profiles_0_pos[t, z] = betti[0]
+                profiles_1_pos[t, z] = betti[1]
 
             # "negative" domain: X == 0
-            write_cubes(X, 'out/cubes/tmp.txt', pos_value=0)
-            betti = calculate_betti_numbers('out/cubes/tmp.txt')
-            if betti is not None:
-                profiles_0_neg[t, z] = betti[0]
-                profiles_1_neg[t, z] = betti[1]
+            # write_cubes(X, out_fname, pos_value=0)
+            # betti = calculate_betti_numbers(out_fname)
+            # if betti is not None:
+            #     profiles_0_neg[t, z] = betti[0]
+            #     profiles_1_neg[t, z] = betti[1]
 
         elapsed_time = time.time() - start_time
         print "done. Time elapsed: %.3f" % elapsed_time
 
     # return (profiles_0_pos, profiles_1_pos, profiles_0_neg, profiles_1_neg)
-    # return (profiles_0_pos, profiles_1_pos)
-    return (profiles_0_neg, profiles_1_neg)
+    return (profiles_0_pos, profiles_1_pos)
+    # return (profiles_0_neg, profiles_1_neg)
 
 
 def xz_profiles(filename, variable, y_dim_name, t_dim_name, **kwargs):
