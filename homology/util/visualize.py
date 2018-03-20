@@ -52,18 +52,18 @@ def persistence_diagram(file_name, n_steps=None):
 
     return fig
 
-def plot_barcodes(intervals, figsize=(12, 12)):
+def plot_barcodes(ax, intervals):
     # Requires an array as produced by extract.persistence_intervals_to_array
-    # figsize=kwargs.get('figsize', (12, 12))
-    fig = plt.figure(figsize=figsize)
+    # ax : Axes  ---  An axes object to draw to
+    # fig, ax = plt.subplots(figsize=figsize)
     ax = plt.axes()
     ax.set_ylim((-5, intervals.shape[0] + 5))
     ax.set_xlim((0, np.amax(intervals)))
     i = 0
     for interval in intervals:
-        plt.plot((interval[0], interval[1]), (i, i), 'b-')
+        out = ax.plot((interval[0], interval[1]), (i, i), 'b-')
         i += 1
-    plt.show()
+    return out
 
 def plot_barcodes_h0_h1(intervals, figsize=(12, 12)):
     # Requires a dict of arrays as produced by extract.persistence_intervals_to_array
