@@ -14,7 +14,10 @@ def persistence_intervals_to_array(filename):
         pi_str = pi_str.split('\n')
         # Assume the line with value range is always in position 2
         value_range = pi_str[2]
-        assert value_range.startswith('value range:')
+        try:
+            assert value_range.startswith('value range:')
+        except AssertionError as error:
+            return None
         max_value = value_range.split(',')[1][:-1]
 
         dim_strings = [s for s in pi_str if s.startswith('persistence intervals in dim')]

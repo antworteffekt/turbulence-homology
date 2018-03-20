@@ -11,7 +11,7 @@ for simulation in names:
     # Directory with point cloud files
     points_directory = '/home/licon/uni-koeln/persistence/pointcloud_data_DALES/samples/%s' % simulation
     # Where to save the PI files
-    output_directory = '/home/licon/uni-koeln/persistence/pointcloud_data_DALES/barcodes/%s' % simulation
+    output_directory = '/home/licon/uni-koeln/persistence/pointcloud_data_DALES/barcodes_h2/%s' % simulation
     # Location of Ripser binary
     ripser_bin = '/usr/local/bin/ripser/ripser'
 
@@ -25,5 +25,5 @@ for simulation in names:
         # print fname_out 
 
         with open(fname_out, 'w') as outfile:
-            args = ('%s --format point-cloud %s' % (ripser_bin, fname_in)).split()
+            args = ('%s --format point-cloud --dim 2 %s' % (ripser_bin, fname_in)).split()
             p = subprocess.Popen(args, stdout=outfile)

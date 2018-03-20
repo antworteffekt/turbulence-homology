@@ -43,7 +43,6 @@ def persistence_diagram(file_name, n_steps=None):
         plt.plot(births[inf_intervals], inf_vec, 'rD')
 
     # plot the diagonal
-    # print (max_death - min_birth) / 20
     d = range(min_birth, max_death, max(1, (max_death - min_birth) / 20))
     plt.plot(d, d, 'g')
     plt.xlabel('birth')
@@ -90,7 +89,6 @@ def plot_barcodes_h0_h1(ax, intervals, param_dict={}):
     ax.legend(by_label.values(), by_label.keys())
     return out
 
-    
 
 def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
     '''
