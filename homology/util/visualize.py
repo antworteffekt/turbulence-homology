@@ -64,11 +64,9 @@ def plot_barcodes(ax, intervals, param_dict={}):
         i += 1
     return out
 
-def plot_barcodes_h0_h1(ax, intervals):
+def plot_barcodes_h0_h1(ax, intervals, param_dict={}):
     # Requires a dict of arrays as produced by extract.persistence_intervals_to_array
     colors = ['tab:green', 'tab:red', 'tab:purple', 'tab:blue', 'tab:orange']
-    fig = plt.figure(figsize=figsize)
-    ax = plt.axes()
 
     n_intervals = sum([x.shape[0] for x in intervals.values()])
     max_value = max([np.amax(x) for x in intervals.values()])
@@ -82,16 +80,15 @@ def plot_barcodes_h0_h1(ax, intervals):
         identifier = k.split('intervals in ')[1]
         for interval in d:
             # print interval
-            plt.plot((interval[0], interval[1]), (idx, idx), color=colors[c], linestyle='solid',
-                     label=identifier)
-            # plt.plot((interval[0], interval[1]), (i, i),  linestyle='solid')
+            out = ax.plot((interval[0], interval[1]), (idx, idx), color=colors[c], linestyle='solid',
+                           label=identifier)
             idx += 1
         c += 1
     # The following lines remove all duplicate values in handles and labels before passing them to legend()
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys())
-    plt.show()
+    ax.legend(by_label.values(), by_label.keys())
+    return out
 
     
 
