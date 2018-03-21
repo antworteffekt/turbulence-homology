@@ -9,19 +9,38 @@ import os
 import numpy as np
 
 
-names = ['20130401_imicro2', '20130716_imicro2', '20130717_imicro2', '20140717_imicro2']
 
-parser = argparse.ArgumentParser(description='Plot barcodes')
-parser.add_argument('--data', help='Directory with model data files', required=True)
-parser.add_argument('--barcodes', help='Directory containing barcode output from Ripser', required=True)
-parser.add_argument('--out', help='Directory to store the generated plots in', required=True)
 
-args = parser.parse_args()
+CLI = argparse.ArgumentParser(description='Generate and save barcode plots.')
+CLI.add_argument(
+    'data',
+    help='Directory with model data files')
+CLI.add_argument(
+    'barcodes',
+    help='Directory containing barcode output from Ripser')
+CLI.add_argument(
+    'out',
+    help='Directory to store the generated plots in')
+CLI.add_argument(
+    '--format',
+    help='Format for plots to be saved in, e.g. pdf or png',
+    default='png')
+CLI.add_argument(
+    '--sim',
+    help='List of simulation names to generate the plots for',
+    nargs='*',
+    dest='simulations',
+    default=['20130401_imicro2', '20130716_imicro2', '20130717_imicro2', '20140717_imicro2'])
+
+
+args = CLI.parse_args()
 data_dir = args.data
 barcodes_top_dir = args.barcodes
 out_dir = args.out
+simulations = args.simulations
+plot_format = args.format
 
-for simulation in names:
+for simulation in simulations:
     print 'Processing data from %s' % simulation
     dataset = Dataset('%s/%s/fielddump.ql.001.nc' % (data_dir, simulation))
 
@@ -32,7 +51,7 @@ for simulation in names:
         t = int(f.split('_t')[1][:-4])
         print 'timestep %d' % t
 
-        outfile = '%s/%s/clouds_barcode_t%d.pdf' % (out_dir, simulation, t)
+        outfile = '%s/%s/clouds_barcode_t%d.%s' % (out_dir, simulation, t, plot_format)
         ql_max = np.amax(dataset.variables['ql'][t,:], 0)
         intervals = persistence_intervals_to_array('%s/%s' % (barcodes_dir, f))
         # Check if return value is None, this indicates no persistence intervals were present
