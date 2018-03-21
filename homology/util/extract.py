@@ -18,8 +18,8 @@ def persistence_intervals_to_array(filename):
             assert value_range.startswith('value range:')
         except AssertionError as error:
             return None
-        max_value = value_range.split(',')[1][:-1]
 
+        max_value = value_range.split(',')[1][:-1]
         dim_strings = [s for s in pi_str if s.startswith('persistence intervals in dim')]
         dim_idx = [pi_str.index(s) for s in dim_strings]
         # Add the index for last position in list
