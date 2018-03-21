@@ -4,26 +4,42 @@ import numpy as np
 from netCDF4 import Dataset
 import subprocess
 import os
+import argparse
 
-names = ['20130401_imicro2', '20130716_imicro2', '20130717_imicro2', '20140717_imicro2']
+CLI = argparse.ArgumentParser(description='Compute persistence intervals for a given set of point clouds.')
+CLI.add_argument(
+    'topdir',
+    help='Top level directory for persistent homology computations.')
+CLI.add_argument(
+    '--sim',
+    help='List of simulation names for which to generate the plots',
+    nargs='*',
+    dest='simulations',
+    default=['20130401_imicro2', '20130716_imicro2', '20130717_imicro2', '20140717_imicro2'])
 
-for simulation in names:
-    # Directory with point cloud files
-    points_directory = '/home/licon/uni-koeln/persistence/pointcloud_data_DALES/samples/%s' % simulation
-    # Where to save the PI files
-    output_directory = '/home/licon/uni-koeln/persistence/pointcloud_data_DALES/barcodes_h2/%s' % simulation
-    # Location of Ripser binary
-    ripser_bin = '/usr/local/bin/ripser/ripser'
+def main(args):
+    top_dir = args.topdir
+    simulations = args.simulations
 
-    filelist = [f for f in os.listdir(points_directory) if f.startswith('clouds_')]
-    for f in filelist:
+    for simulation in simulations:
+        # Directory with point cloud files
+        points_dir = '%s/samples/%s' % (top_dir, simulation)
+        # Where to save the PI files
+        out_dir = '%s/barcodes/%s' % (top_dir, simulation)
+        # Location of Ripser binary
+        ripser_bin = '/usr/local/bin/ripser/ripser'
 
-        fname_in = '%s/%s' % (points_directory, f)
-        # print fname_in
+        filelist = [f for f in os.listdir(points_dir) if f.startswith('clouds_')]
+        for f in filelist:
 
-        fname_out = '%s/PI_%s' % (output_directory, f)
-        # print fname_out 
+            fname_in = '%s/%s' % (points_dir, f)
+            # print fname_in
 
-        with open(fname_out, 'w') as outfile:
-            args = ('%s --format point-cloud --dim 2 %s' % (ripser_bin, fname_in)).split()
-            p = subprocess.Popen(args, stdout=outfile)
+            fname_out = '%s/PI_%s' % (out_dir, f)
+            # print fname_out 
+
+            with open(fname_out, 'w') as outfile:
+                args = ('%s --format point-cloud %s' % (ripser_bin, fname_in)).split()
+                p = subprocess.Popen(args, stdout=outfile)
+
+main(CLI.parse_args())

@@ -30,16 +30,15 @@ CLI.add_argument(
     help='Whether to plot the cloud fields as binary domains',
     action='store_true')
 
-args = CLI.parse_args()
-data_dir = args.data
-top_dir = args.topdir
-simulations = args.simulations
-plot_format = args.format
-plot_binary_field = args.binary
+def main(args):
+    data_dir = args.data
+    top_dir = args.topdir
+    simulations = args.simulations
+    plot_format = args.format
+    plot_binary_field = args.binary
 
-out_dir = '%s/plots' % top_dir
+    out_dir = '%s/plots' % top_dir
 
-def main():
     for simulation in simulations:
         print 'Processing data from %s' % simulation
         dataset = Dataset('%s/%s/fielddump.ql.001.nc' % (data_dir, simulation))
@@ -89,4 +88,4 @@ def main():
 
         dataset.close()
 
-main()
+main(CLI.parse_args())
