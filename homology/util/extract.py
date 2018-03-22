@@ -3,7 +3,7 @@
 import numpy as np
 from netCDF4 import Dataset
 from itertools import islice
-import re
+from ast import literal_eval
 
 def array_to_cubes(X, path_to_outfile):
     """ Convert a numpy array to cube file format and write to disk.
