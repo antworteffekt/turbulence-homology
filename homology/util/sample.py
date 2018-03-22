@@ -59,6 +59,17 @@ def sample_cloud_field(cloud_field, out_dir, proportional_sampling=True, samplin
         return total_sample
 
 
-def project_2d_cloud_field(dataset):
-    pass
-    
+def project_2d_cloud_field(dataset, timestep):
+    """
+    Input: 
+        dataset : netCDF4 dataset object
+        timestep : integer value
+    Output: 2-dimensional projection of cloud field as numpy array for given timestep
+    """
+    height_dimension = 1
+    variable_name = 'ql'
+    # Assume the height coordinate is in position 1, otherwise projection will happen in the wrong axis
+    assert dataset.variables[variable_name].dimensions[height_dimension] == 'zt'
+    projected_field = np.amax(dataset.variables['ql'][timestep,:], 0)
+    return projected_field
+
