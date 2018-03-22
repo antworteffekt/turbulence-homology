@@ -22,24 +22,27 @@ def main(args):
     simulations = args.simulations
 
     for simulation in simulations:
+        print 'Processing simulation %s ...' % simulation
         # Directory with point cloud files
-        points_dir = '%s/samples/%s' % (top_dir, simulation)
+        points_dir = '%s/%s' % (top_dir, simulation)
         # Where to save the PI files
         out_dir = '%s/barcodes/%s' % (top_dir, simulation)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
         # Location of Ripser binary
         ripser_bin = '/usr/local/bin/ripser/ripser'
 
-        filelist = [f for f in os.listdir(points_dir) if f.startswith('clouds_')]
+        filelist = [f for f in os.listdir(points_dir) if f.endswith('physicalpoints.csv')]
         for f in filelist:
 
-            fname_in = '%s/%s' % (points_dir, f)
+            fname_in = os.path.join(points_dir, f)
             # print fname_in
 
-            fname_out = '%s/PI_%s' % (out_dir, f)
+            fname_out = '%s/intervals_%s.csv' % (out_dir, f.split('_physicalpoints')[0])
             # print fname_out 
 
             with open(fname_out, 'w') as outfile:
                 args = ('%s --format point-cloud %s' % (ripser_bin, fname_in)).split()
-                p = subprocess.Popen(args, stdout=outfile)
+                p = subprocess.Popen(args, stdout=outfile).communicate()
 
 main(CLI.parse_args())

@@ -61,18 +61,45 @@ def sample_connected_components(cube_field, out_dir, proportional_sampling=True,
         return total_sample
 
 
-def project_2d_cloud_field(dataset, timestep):
+def project_2d_cloud_field(dataset, timestep, variable_name):
     """
     Input: 
         dataset : netCDF4 dataset object
         timestep : integer value
-    Output: 2-dimensional projection of cloud field as numpy array for given timestep
+    Output: 2-dimensional projection of cloud field as numpy array for given timestep, given as
+    boolean array
     """
     height_dimension = 1
-    variable_name = 'ql'
     # Assume the height coordinate is in position 1, otherwise projection will happen in the wrong axis
     assert dataset.variables[variable_name].dimensions[height_dimension] == 'zt'
-    projected_field = np.amax(dataset.variables['ql'][timestep,:], 0)
+
+    projected_field = np.amax(dataset.variables[variable_name][timestep, :], 0)
     projected_field = (projected_field > 0)
     return projected_field
+
+
+def save_sample(dataset, sample, out_fname):
+    """
+    Writes both the gridpoints sampled as well as the physical coordinates.
+    """
+    sample_grid_fname = '%s_gridpoints.csv' % out_fname
+    sample_location_fname = '%s_physicalpoints.csv' % out_fname
+
+    # Convert grid points to physical coordinates
+    yt = dataset.variables['yt'][:]
+    xt = dataset.variables['xt'][:]
+    # Do the map manually
+    points = np.zeros(sample.shape)
+    i = 0
+    for row in sample:
+        points[i,:] = [yt[row[0]], xt[row[1]]]
+        i += 1
+
+    with open(sample_grid_fname, 'w+') as f:
+        np.savetxt(f, sample, delimiter=',')
+    with open(sample_location_fname, 'w+') as f:
+        np.savetxt(f, points, delimiter=',')
+
+
+
 
