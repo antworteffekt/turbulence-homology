@@ -65,11 +65,19 @@ def main(args):
             if plot_binary_field:
                 ax1.imshow(ql_max > 0, cmap='Greys', interpolation='none')
                 ax1.scatter(sampled_points[:,1], sampled_points[:,0],
-                            facecolors='none', edgecolors='aqua', alpha=1, marker='o')
+                            facecolors='none',
+                            edgecolors='aqua',
+                            alpha=1,
+                            marker='o')
+
             else:
                 ax1.imshow(ql_max, cmap='Blues')
                 ax1.scatter(sampled_points[:,1], sampled_points[:,0],
-                            facecolors='none', edgecolors='crimson', alpha=0.6, marker='o')
+                            facecolors='none',
+                            edgecolors='crimson',
+                            alpha=0.6,
+                            marker='o')
+
             ax1.invert_yaxis()
             ax1.set_title('QL maximum values')
             # Check if there is actually any H1 homology, otherwise call the simpler function with only the H0 barcodes

@@ -8,63 +8,6 @@ from netCDF4 import Dataset
 import types
 
 
-def write_cubes(X, out_fname, pos_value=1, **kwargs):
-    """
-    Given a two dimensional numpy array, write the corresponding list of cubes
-    to disk.
-
-    """
-    # just assume that 1 is the target value for now
-    X_ = np.where(X == pos_value)
-    # create the string object with the appropriate data
-    X_ = str(zip(X_[0], X_[1]))
-    # clean up the string a bit
-    X_ = X_.replace('[', '').replace(']', '')
-    X_ = X_.replace('), ', ')\n')
-    X_ = 'dimension 2\n' + X_
-    # write to file
-    outfile = open(out_fname, 'w')
-    outfile.write(X_)
-    outfile.close()
-
-
-def write_cubes_timeblock(X, pos_value, out_fname, **kwargs):
-    """
-    Given a three dimensional numpy array write the corresponding list of cubes
-    to disk.
-    """
-    # just assume that 100 is the target value for now
-    X_ = np.where(X == pos_value)
-    # create the string object with the appropriate data
-    X_ = str(zip(X_[0], X_[1], X_[2]))
-    # clean up the string a bit
-    X_ = X_.replace('[', '').replace(']', '')
-    X_ = X_.replace('), ', ')\n')
-    X_ = 'dimension 3\n' + X_
-    # write to file
-    outfile = open(out_fname, 'w')
-    outfile.write(X_)
-    outfile.close()
-
-
-def calculate_betti_numbers(fname):
-    """
-    Given a file with a list of cubes, calculate its betti numbers and return them.
-    """
-    # Check if the file actually contains data
-    lines_command_string = 'wc -l %s' % fname
-    args = shlex.split(lines_command_string)
-    n_lines = subprocess.check_output(args)
-    n_lines = int(n_lines.split(' ')[0])
-    if n_lines > 1:
-        command_string = 'chomp %s' % fname
-        args = shlex.split(command_string)
-        betti_numbers = subprocess.check_output(args)
-        return [int(x) for x in betti_numbers.split(' ')]
-    else:
-        return None
-
-
 def _binarize_array(original_data, threshold):
     """
     Given a Numpy array, either calculate a threshold value or use
