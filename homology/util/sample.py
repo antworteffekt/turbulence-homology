@@ -6,20 +6,18 @@ from homology.util.extract import array_to_cubes, cubes_to_array
 import math
 import subprocess
 
-def sample_cloud_field(cloud_field, out_dir, proportional_sampling=True, sampling_proportion=0.05):
+def sample_connected_components(cube_field, out_dir, proportional_sampling=True, sampling_proportion=0.05):
     """ 
     Given a dataset, compute its connected components and geenerate a random sample from each
-    cloud_field : numpy array produced by project_2d_cloud_field
+    cube_field : numpy array, assumed binary
     out_dir : filesystem directory to store cube files in
     """
-    # Start by separating those points which actually correspond to clouds
-    cloud_points = np.where(cloud_field > 0)
-    cloud_points = np.array((cloud_points[0], cloud_points[1])).T
+    cube_points = np.where(cube_field)
+    cube_points = np.array((cube_points[0], cube_points[1])).T
     # If there are no cloud points, return None
-    if cloud_points.shape[0] == 0:
+    if cube_points.shape[0] == 0:
         return None
     else:
-        print cloud_points.shape
         # Check output directory
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
@@ -29,10 +27,9 @@ def sample_cloud_field(cloud_field, out_dir, proportional_sampling=True, samplin
         os.chdir(out_dir)
         # Write data to disk
         out_fname = 'points.cub'
-        array_to_cubes(cloud_points, out_fname)
+        array_to_cubes(cube_points, out_fname)
         # Call CHomP program to separate connected components
         args = ('psetconn %s component' % out_fname).split()
-        print args
         subprocess.call(args)
 
         # List all files produced
@@ -76,5 +73,6 @@ def project_2d_cloud_field(dataset, timestep):
     # Assume the height coordinate is in position 1, otherwise projection will happen in the wrong axis
     assert dataset.variables[variable_name].dimensions[height_dimension] == 'zt'
     projected_field = np.amax(dataset.variables['ql'][timestep,:], 0)
+    projected_field = (projected_field > 0)
     return projected_field
 

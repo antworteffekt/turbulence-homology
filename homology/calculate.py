@@ -8,12 +8,11 @@ from netCDF4 import Dataset
 import types
 
 
-def _binarize_array(original_data, threshold):
+def binarize_array(X, threshold):
     """
     Given a Numpy array, either calculate a threshold value or use
     the one provided to convert it into a binary array, to be used later.
     """
-    X = np.array(original_data)
     if isinstance(threshold, types.FunctionType):
         threshold_value = threshold(X)
     else:
