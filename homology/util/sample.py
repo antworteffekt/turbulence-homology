@@ -30,7 +30,8 @@ def sample_connected_components(cube_field, out_dir, proportional_sampling=True,
         array_to_cubes(cube_points, out_fname)
         # Call CHomP program to separate connected components
         args = ('psetconn %s component' % out_fname).split()
-        subprocess.call(args)
+        # subprocess.call(args)
+        subprocess.check_output(args, stderr=subprocess.STDOUT)
 
         # List all files produced
         filelist = [f for f in os.listdir(out_dir) if f.startswith('component')]

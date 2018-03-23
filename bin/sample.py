@@ -30,6 +30,10 @@ def process_arguments():
         help='Variable name to use for sampling.',
         required=True)
     parser.add_argument(
+        '--project',
+        help='Whether to use the column-wise projection of the selected variable.',
+        action='store_true')
+    parser.add_argument(
         '--sample-ratio',
         help='Proportion of domain size to sample.',
         type=float,
@@ -49,7 +53,7 @@ def process_arguments():
 def main():
     
     args = process_arguments()
-
+    # print args
     # Seed the generator with a random prime number, say 57
     np.random.seed(57)
     # Check for ~/var/tmp
@@ -67,18 +71,33 @@ def main():
     
     # Iterate over simulation timesteps
     for t in timerange:
+        print '********* Timestep: %d *********' % t
+        if args.project:
+            # Get two-dimensional projected field
+            domain = project_2d_cloud_field(dataset, t, args.varname)
 
-        # Get two-dimensional projected field
-        domain = project_2d_cloud_field(dataset, t, args.varname)
-
-        # Get the required number of samples and write to disk
-        for i in range(args.n):
-            sample = sample_connected_components(domain, tmp, args.sample_ratio)
-            if sample is None:
-                continue
-            else:
-                out_fname = '%s/t%d_sample%d' % (args.output_dir, t, i+1)
-                save_sample(dataset, sample, out_fname)
+            # Get the required number of samples and write to disk
+            for i in range(args.n):
+                sample = sample_connected_components(domain, tmp, args.sample_ratio)
+                if sample is None:
+                    continue
+                else:
+                    out_fname = '%s/t%d_sample%d' % (args.output_dir, t, i+1)
+                    save_sample(dataset, sample, out_fname)
+        else:
+            # Assume the samples will be taken in horizontal planes
+            assert dataset.variables[args.varname].dimensions[1] == 'zm'
+            z_range = range(dataset.variables[args.varname].shape[1])
+            for z in z_range:
+                domain = (dataset.variables[args.varname][t,z,:] > 0)
+                # Get the required number of samples and write to disk
+                for i in range(args.n):
+                    sample = sample_connected_components(domain, tmp, args.sample_ratio)
+                    if sample is None:
+                        continue
+                    else:
+                        out_fname = '%s/z%d_t%d_sample%d' % (args.output_dir, z, t, i+1)
+                        save_sample(dataset, sample, out_fname)
 
     dataset.close()
 
