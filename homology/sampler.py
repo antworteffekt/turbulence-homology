@@ -7,11 +7,13 @@ import math
 class Sampler(object):
     """
     Assume the incoming array X is two-dimensional, for now.
+    TODO: implement destructor (?)
     """
     def __init__(self, X):
         self.uf = UnionFind()
         self.X = X
         self.components = None
+        self.sample_ratio = 0.05
 
     def connected_components(self, connectivity='four'):
         """
@@ -42,11 +44,12 @@ class Sampler(object):
 
             # After this we can invert the parent_pointers dict and convert to array coordinates
             self.components = {}
+            inverted_parents = {}
             for k, v in self.uf.parent_pointers.iteritems():
-                keys = self.components.setdefault(self.uf.num_to_objects.get(v), [])
+                keys = inverted_parents.setdefault(self.uf.num_to_objects.get(v), [])
                 keys.append(self.uf.num_to_objects.get(k))
             # Convert the lists to numpy arrays
-            for k, v in self.components:
+            for k, v in inverted_parents.iteritems():
                 self.components[k] = np.array(v)
 
 
@@ -55,13 +58,12 @@ class Sampler(object):
         else:
             raise ValueError('Unknown connectivity type %s.' % connectivity)
 
-    def sample(self, points, n_samples, sample_ratio, dest=None):
+    def sample(self, points, sample_ratio=0.05, dest=None):
         """
         points : a numpy array to sample from; rows are points in n-dimensional space.
-        dest : can be either None, in which case the samples are returned, or path to an output file
         """
         n_points = points.shape[0]
-        sample_size = int(math.ceil(sampling_ratio * n_points))
+        sample_size = int(math.ceil(sample_ratio * n_points))
         total_sample = []
 
         if sample_size == 1:
@@ -74,7 +76,18 @@ class Sampler(object):
             total_sample.extend(points_sample)
 
         total_sample = np.array(total_sample)
-        
+        return total_sample
 
+    def sample_components(self, n_samples=10, dest=None):
+        """
+        n_samples : int
+        dest : if None values are returned, else it's path to output files (according to predefined format)
+        """
+        if self.components is None:
+            self.connected_components()
+        for component in self.components.values():
 
-
+            for i in range(n_samples):
+                sample_i = self.sample(component, self.sample_ratio)
+                # print "Computed "
+                # print sample_i
