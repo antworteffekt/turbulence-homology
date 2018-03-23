@@ -89,6 +89,10 @@ def main():
             assert dataset.variables[args.varname].dimensions[1] == 'zm'
             z_range = range(dataset.variables[args.varname].shape[1])
             for z in z_range:
+                # Create separate directories for each horizontal segment
+                current_out_dir = '%s/z%d' % (args.output_dir, z)
+                if not os.path.exists(current_out_dir):
+                    os.makedirs(current_out_dir)
                 domain = (dataset.variables[args.varname][t,z,:] > 0)
                 # Get the required number of samples and write to disk
                 for i in range(args.n):
@@ -96,7 +100,7 @@ def main():
                     if sample is None:
                         continue
                     else:
-                        out_fname = '%s/z%d_t%d_sample%d' % (args.output_dir, z, t, i+1)
+                        out_fname = '%s/t%d_sample%d' % (current_out_dir, t, i+1)
                         save_sample(dataset, sample, out_fname)
 
     dataset.close()
