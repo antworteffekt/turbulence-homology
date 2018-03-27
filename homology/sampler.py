@@ -20,6 +20,13 @@ class Sampler(object):
         Go through the binary array X, keeping a record of the connected components. Can use either
         four- or eight-connectivity.
         """
+        # Check array dimensions
+        assert self.X.ndim == 2
+        self.components = {}
+        # Check that there are actually elements in the domain, if not then do nothing
+        if np.where(self.X)[0].size == 0:
+            print "Empty array, no components to split."
+            return
         if connectivity == 'four':
             it = np.nditer(self.X, flags=['multi_index'])
             for x in it:
@@ -43,7 +50,6 @@ class Sampler(object):
                     self.uf.find(it.multi_index)
 
             # After this we can invert the parent_pointers dict and convert to array coordinates
-            self.components = {}
             inverted_parents = {}
             for k, v in self.uf.parent_pointers.iteritems():
                 keys = inverted_parents.setdefault(self.uf.num_to_objects.get(v), [])
@@ -64,19 +70,14 @@ class Sampler(object):
         """
         n_points = points.shape[0]
         sample_size = int(math.ceil(sample_ratio * n_points))
-        total_sample = []
 
         if sample_size == 1:
             points_sample = points[np.random.choice(n_points)]
-            total_sample.append(points_sample)
         else:
             # Perform uniform sampling without replacement
             idx = np.random.choice(points.shape[0], size=sample_size, replace=False)
             points_sample = points[idx]
-            total_sample.extend(points_sample)
-
-        total_sample = np.array(total_sample)
-        return total_sample
+        return points_sample
 
     def sample_components(self, n_samples=10, dest=None):
         """
@@ -85,9 +86,25 @@ class Sampler(object):
         """
         if self.components is None:
             self.connected_components()
-        for component in self.components.values():
-
+        # If self.components is empty this should do nothing
+        samples = []
+        if dest is None:
             for i in range(n_samples):
-                sample_i = self.sample(component, self.sample_ratio)
-                # print "Computed "
-                # print sample_i
+                sample_i = np.empty((0,2))
+                for component in self.components.values():
+                    component_sample = self.sample(component, self.sample_ratio)
+                    sample_i = np.vstack((sample_i, component_sample))
+                samples.append(sample_i)
+            return samples
+        else:
+            for i in range(n_samples):
+                sample_i = np.empty((0,2))
+                for component in self.components.values():
+                    component_sample = self.sample(component, self.sample_ratio)
+                    sample_i = np.vstack((sample_i, component_sample))
+                # When sample_i is finished, write list of points to the specified path
+                fname = '%s_sample%d_gridpoints.csv' % (dest, i+1)
+                with open(fname, 'w+') as f:
+                    np.savetxt(f, sample_i, delimiter=',')
+
+                    
