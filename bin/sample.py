@@ -82,7 +82,7 @@ def main():
             #         save_sample(dataset, sample, out_fname)
         else:
             # Assume the samples will be taken in horizontal planes
-            assert dataset.variables[args.varname].dimensions[1] == 'zm'
+            # assert dataset.variables[args.varname].dimensions[1] == 'zm'
             z_range = range(dataset.variables[args.varname].shape[1])
             for z in z_range:
                 # Create separate directories for each horizontal segment
@@ -91,7 +91,7 @@ def main():
                     os.makedirs(current_out_dir)
                 out_fname = '%s/t%d' % (current_out_dir, t)
 
-                domain = (dataset.variables[args.varname][t,z,:] > 0)
+                domain = (dataset.variables[args.varname][t,z,:] > 0.01)
                 sampler = Sampler(domain)
                 # Separate connected components
                 sampler.connected_components(connectivity='four')
