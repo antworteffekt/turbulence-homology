@@ -3,7 +3,7 @@
 import numpy as np
 from homology.util.unionfind import UnionFind
 import matplotlib.pyplot as plt
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 import pprint
 
@@ -178,8 +178,7 @@ class MergeTree(object):
 
                 below = map(lambda x, y: x + y, it.multi_index, (-1, 0, 0))
                 if not any(n < 0 for n in below) and X_bin[tuple(below)]:
-                    # Don't do the union here, just keep track of the involved
-                    # elements instead.
+                    # Don't do the union here, just keep track of the involved elements instead.
                     # Get cell's parent in this level
                     cell_parent = self.uf.find(it.multi_index)
                     # Get root of cell below
@@ -191,6 +190,7 @@ class MergeTree(object):
 
             it.iternext()
             if it.finished or it.multi_index[0] != current_level:
+                # Level empty, store merger information
                 for level_parent, below_parent in below_joins.iteritems():
                     if len(set(below_parent)) > 1:
                         # Get the roots for the objects below
@@ -245,6 +245,28 @@ class MergeTree(object):
                 # Reset the below_joins dictionary
                 below_joins.clear()
 
+    def structure_size(self):
+        """
+        Count the number of cells in each connected structure.
+        Returns {parent : #(cells)}
+        """
+        # First invert the dict parent_pointers
+        child_nodes = {}
+        for k, v in self.uf.parent_pointers.iteritems():
+            keys = child_nodes.setdefault(v, [])
+            keys.append(k)
+        return {k : len(v) for k, v in child_nodes.iteritems()}
+
+    def mergers_per_level(self):
+        """
+        Levels at which mergers occur
+        Returns {level : n_mergers}
+        """
+        merge_levels = [d[0] + 1 for d in self.mergers.values()]
+        mergers = Counter(merge_levels)
+        return mergers
+
+
     def plot(self):
         fig = plt.figure()
         ax = plt.axes()
@@ -259,4 +281,4 @@ class MergeTree(object):
         # ax.invert_xaxis()
         return fig, ax
         # fig.show()
-        
+

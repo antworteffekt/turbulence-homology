@@ -36,25 +36,7 @@ August 12, 2003 Josiah Carlson
 Modified: Aug. 2017, Jose Licon
 '''
 
-def Ackerman(inp, memo={0:1}):
-    inp = max(int(inp), 0)
-    if inp in memo:
-        return memo[inp]
-    elif inp <= 5:
-        memo[inp] = 2**ackerman(inp-1)
-        return memo[inp]
-    else:
-        print "Such a number is not representable by all the subatomic\nparticles in the universe."
-        ackerman(4);
-        out = (inp-4)*"2**" + str(memo[4])
-        print out
-        raise Exception, "NumberCannotBeRepresentedByAllSubatomicParticlesInUniverse"
-
-def inverseAckerman(inp):
-    t = 0
-    while Ackerman(t) < inp:
-        t += 1
-    return t
+import numpy as np
 
 
 class UnionFind:
@@ -147,16 +129,81 @@ class UnionFind:
                 out.append(repr(i))
         return ', '.join(out)
 
+
+class UnionFindOpt(object):
+
+    def __init__(self, n):
+        """
+        n : int
+        """
+        self.parent = np.array(range(n), dtype=np.uint32)
+        self.size   = np.ones(n, dtype=np.uint32)
+        # Initialize using some value
+        self.keys = {k : 0 for k in range(n)}
+
+    def find(self, i):
+        """
+        i : int
+        return p : int
+        """
+        a = i
+        b = self.parent[i]
+        if a == b:
+            # Node is its own parent, do nothing
+            return i
+        # Go up the hierarchy until root is found
+        while a != b:
+            a = b
+            b = self.parent[a]
+        # Root is now stored in b
+        p = b
+        # Return to starting level, go back up pointing everything to the root along the way.
+        a = i
+        b = self.parent[i]
+        while a != b:
+            self.parent[a]  = p
+            a = b
+            b = self.parent[a]
+        # Return root
+        return p
+
+    def union(self, i, j):
+        """
+        i : int
+        j : int
+        return : void
+        """
+        a = self.find(i)
+        b = self.find(j)
+        if a == b:
+            return
+        if self.size[a] > self.size[b]:
+            self.parent[b] = a
+            self.size[a] += self.size[b]
+            self.size[b] = 0
+        else:
+            self.parent[a] = b
+            self.size[b] += self.size[a]
+            self.size[a] = 0
+
+
 if __name__ == '__main__':
-    print "Testing..."
-    uf = UnionFind()
-    az = "abcdefghijklmnopqrstuvwxyz"
-    az += az.upper()
-    uf.insert_objects(az)
-    import random
-    cnt = 0
-    while len(uf.num_weights) > 20:
-        cnt += 1
-        uf.union(random.choice(az), random.choice(az))
-    print uf, cnt
-    print "Testing complete."
+
+    uf = UnionFindOpt(11)
+    print "parents at start: %s" % uf.parent
+    uf.union(0, 1)
+    uf.union(2, 1)
+    uf.union(3, 1)
+    uf.union(4, 3)
+    uf.union(6, 5)
+    uf.union(7, 5)
+    uf.union(10, 5)
+    uf.union(9, 7)
+    uf.union(8, 7)
+
+    # p = np.array([ 3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3, 13,  3,  3,  3])
+    # assert(all(uf.parent == p))
+    r = np.array([1, 5, 1, 1, 1, 6, 1, 1, 1, 1, 1])
+    p = np.array([1, 1, 1, 1, 1, 5, 5, 5, 5, 5, 5])
+    assert(all(p == uf.parent))
+    assert(all(r == uf.size))
