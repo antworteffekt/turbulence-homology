@@ -86,17 +86,6 @@ class Sampler(object):
             # print x
             self.uf.find(x)
 
-        # After this we can invert the parent_pointers dict and convert to
-        # array coordinates
-        # inverted_parents = {}
-        # for k, v in self.uf.parent_pointers.iteritems():
-        #     keys = inverted_parents.setdefault(
-        #         self.uf.num_to_objects.get(v), [])
-        #     keys.append(self.uf.num_to_objects.get(k))
-        # # Convert the lists to numpy arrays
-        # for k, v in inverted_parents.iteritems():
-        #     self.components[k] = np.array(v)
-
     def sample(self, points, sample_ratio=0.05, dest=None):
         """
         points : a numpy array to sample from; rows are points in n-dimensional space.
@@ -120,6 +109,8 @@ class Sampler(object):
         """
         if self.components is None:
             self.connected_components()
+            # TODO: update this to work with the new implementation!
+            
         # If self.components is empty this should do nothing
         samples = []
         if dest is None:
