@@ -46,8 +46,33 @@ def process_arguments():
     return parser.parse_args()
 
 
+def select_data(in_fname, multiprocess, varname, rescale, axis, t, v):
+
+    idx = [t, slice(None, None, None), slice(None, None, None), slice(None, None, None)]
+    idx[axis] = v
+
+    # Open dataset connection if a string is given, i.e. if multiprocessing flag is signalled
+    if multiprocess:
+        dataset = Dataset(in_fname, 'r')
+        data = dataset.variables[varname][idx]
+        if rescale:
+            data = dataset.variables[varname].var_add_offset + \
+                   dataset.variables[varname].var_scale_factor * data
+        # Close dataset connection
+        dataset.close()
+
+    else:
+        # The other possibility is that input is already a file connection
+        dataset = in_fname
+        data = dataset.variables[varname][idx]
+        if rescale:
+            data = dataset.variables[varname].var_add_offset + \
+                   dataset.variables[varname].var_scale_factor * data
+
+    return data
+
+
 def structure_sizes(input_fname, multiprocess, varname, rescale, axis, periodicity, params):
-# def structure_sizes_multiprocess(input_fname, varname, rescale, axis, params):    
     """
     Given a dataset, rescale (if necessary), split into connected components,
     and aggregate their sizes. Return as a list of integers. 
@@ -66,41 +91,37 @@ def structure_sizes(input_fname, multiprocess, varname, rescale, axis, periodici
     """
     # Unpack parameters
     t, v, threshold = params
-    # print ('Timestep %d, Height %d' % (t, v))
     
-    idx = [t, slice(None, None, None), slice(None, None, None), slice(None, None, None)]
-    idx[axis] = v
+    # idx = [t, slice(None, None, None), slice(None, None, None), slice(None, None, None)]
+    # idx[axis] = v
 
-    # Open dataset connection if a string is given, i.e. if multiprocessing flag is signalled
-    if multiprocess:
-        dataset = Dataset(input_fname, 'r')
-        data = dataset.variables[varname][idx]
-        # print (data.shape)
-        if rescale:
-            data = dataset.variables[varname].var_add_offset + \
-                   dataset.variables[varname].var_scale_factor * data
-        # Close dataset connection
-        dataset.close()
+    # # Open dataset connection if a string is given, i.e. if multiprocessing flag is signalled
+    # if multiprocess:
+    #     dataset = Dataset(input_fname, 'r')
+    #     data = dataset.variables[varname][idx]
+    #     if rescale:
+    #         data = dataset.variables[varname].var_add_offset + \
+    #                dataset.variables[varname].var_scale_factor * data
+    #     # Close dataset connection
+    #     dataset.close()
 
-    else:
-        # The other possibility is that input is already a file connection
-        dataset = input_fname
-        data = dataset.variables[varname][idx]
-        # print (data.shape)
-        if rescale:
-            data = dataset.variables[varname].var_add_offset + \
-                   dataset.variables[varname].var_scale_factor * data
-
+    # else:
+    #     # The other possibility is that input is already a file connection
+    #     dataset = input_fname
+    #     data = dataset.variables[varname][idx]
+    #     if rescale:
+    #         data = dataset.variables[varname].var_add_offset + \
+    #                dataset.variables[varname].var_scale_factor * data
+    X = select_data(input_fname, multiprocess, varname, rescale, axis, t, v)
 
     if threshold == 'mean':
-        sampler = Sampler(data > np.mean(data))
+        sampler = Sampler(X > np.mean(data))
         sampler.connected_components(periodic=periodicity)
     else:
-        sampler = Sampler(data > threshold)
+        sampler = Sampler(X > threshold)
         sampler.connected_components(periodic=periodicity)
 
     sizes = [x for x in sampler.uf.size if x != 0]
-    # print (sizes)
     return {'time' : t,
             'var' : v,
             'threshold' : threshold,
@@ -116,7 +137,6 @@ if __name__ == '__main__':
     testdata = True
 
     args = process_arguments()
-    # print (args)
 
     # Select environment
     if args.env == 'LES':
@@ -165,8 +185,10 @@ if __name__ == '__main__':
     # Time range
     if testdata:
         t_range = range(d.dimensions[ci.DIMENSIONS['t']].size)[10:12]
+        var_range = range(d.dimensions[dim_name].size)[5:7]
     else:
         t_range = range(d.dimensions[ci.DIMENSIONS['t']].size)
+        var_range = range(d.dimensions[dim_name].size)
 
     # Variable range. Given by the first character in the case of velocity vector component (z_wind, etc.)
     var_direction = var_key[0]
@@ -185,12 +207,6 @@ if __name__ == '__main__':
             axis = d[var_name].dimensions.index(dim_name)
         else:
             raise
-    
-    if testdata:
-        var_range = range(d.dimensions[dim_name].size)[5:7]
-    else:
-        var_range = range(d.dimensions[dim_name].size)
-    
 
     d.close()
 
@@ -209,39 +225,20 @@ if __name__ == '__main__':
     else:
 
         d = Dataset(in_fname, 'r')
-        out_fname = '%s/%s_structure_sizes_%s.pickle' % (out_dir, var_key, k)
+        # out_fname = '%s/%s_structure_sizes_%s.pickle' % (out_dir, var_key, k)
         params = product(t_range, var_range, thresholds.values())
         res = []
         for p in params:
             res.append(structure_sizes(d, args.multiprocess, var_name, ci.RESCALE, axis, ci.PERIODIC, p))
-        # for t in t_range:
-        #     sizes[t] = {}
-        #     for v in var_range:
-        #         # Indices for slicing
-        #         idx = [t, slice(None, None, None), slice(None, None, None), slice(None, None, None)]
-        #         idx[axis] = v
-        #         # print(idx)
-        #         # separate components in two-dimensional field
-        #         X = d.variables[var_name][idx]
-        #         if ci.RESCALE:
-        #             X = d[var_name].var_add_offset + d[var_name].var_scale_factor * X
-        #         sampler = Sampler(X > threshold)
-
-        #         sampler.connected_components(periodic=ci.PERIODIC)
-
-        #         sizes[t][v] = [x for x in sampler.uf.size if x != 0]
 
         print ("Done.")
         d.close()
-
 
     # Reorganize data for writing
     sizes = defaultdict(dict)
     for t, v in product(t_range, var_range):
         sizes[t][v] = [x['sizes'] for x in res if x['time'] == t and x['var'] == v][0]
 
-
     out_fname = '%s/%s_structure_sizes_%s.pickle' % (out_dir, var_key, k)
     with open(out_fname, 'w') as f:
         pickle.dump(sizes, f)
-
