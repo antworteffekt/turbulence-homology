@@ -12,6 +12,7 @@ from itertools import product
 from functools import partial
 import multiprocessing as mp
 from collections import defaultdict
+import logging
 
 def process_arguments():
 
@@ -92,26 +93,8 @@ def structure_sizes(input_fname, multiprocess, varname, rescale, axis, periodici
     # Unpack parameters
     t, v, threshold = params
     
-    # idx = [t, slice(None, None, None), slice(None, None, None), slice(None, None, None)]
-    # idx[axis] = v
+    logging.info("Procesing plane for (t , v) = (%s, %s)" % (t, v))
 
-    # # Open dataset connection if a string is given, i.e. if multiprocessing flag is signalled
-    # if multiprocess:
-    #     dataset = Dataset(input_fname, 'r')
-    #     data = dataset.variables[varname][idx]
-    #     if rescale:
-    #         data = dataset.variables[varname].var_add_offset + \
-    #                dataset.variables[varname].var_scale_factor * data
-    #     # Close dataset connection
-    #     dataset.close()
-
-    # else:
-    #     # The other possibility is that input is already a file connection
-    #     dataset = input_fname
-    #     data = dataset.variables[varname][idx]
-    #     if rescale:
-    #         data = dataset.variables[varname].var_add_offset + \
-    #                dataset.variables[varname].var_scale_factor * data
     X = select_data(input_fname, multiprocess, varname, rescale, axis, t, v)
 
     if threshold == 'mean':
@@ -132,11 +115,16 @@ if __name__ == '__main__':
     """
     Load file, separate components, calculate sizes.
     """
-
-    # TODO: add boolean flag to generate test data only (2 timesteps, two plane cross sections)
-    testdata = True
+    logging.basicConfig(filename='size_distributions.log', 
+        format='%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        level=logging.INFO)
 
     args = process_arguments()
+    # TODO: add boolean flag to generate test data only (2 timesteps, two plane cross sections)
+    testdata = True
+    if testdata:
+        logging.warning('Computing test data.')
 
     # Select environment
     if args.env == 'LES':
@@ -150,6 +138,8 @@ if __name__ == '__main__':
     else:
         raise ValueError("Invalid model environment selected.")
     
+    logging.info("Starting process.\n***   Model: %s    Simulation: %s    Variable: %s" % (args.env, args.s, args.varname))
+
     # Variable name
     var_key = args.varname
     var_name = ci.VARIABLES[var_key]
@@ -182,14 +172,6 @@ if __name__ == '__main__':
 
     # Open file connection to read parameters
     d = Dataset(in_fname, 'r')
-    # Time range
-    if testdata:
-        t_range = range(d.dimensions[ci.DIMENSIONS['t']].size)[10:12]
-        var_range = range(d.dimensions[dim_name].size)[5:7]
-    else:
-        t_range = range(d.dimensions[ci.DIMENSIONS['t']].size)
-        var_range = range(d.dimensions[dim_name].size)
-
     # Variable range. Given by the first character in the case of velocity vector component (z_wind, etc.)
     var_direction = var_key[0]
     dim_name = ci.DIMENSIONS[var_direction]
@@ -207,6 +189,14 @@ if __name__ == '__main__':
             axis = d[var_name].dimensions.index(dim_name)
         else:
             raise
+
+    # Time range
+    if testdata:
+        t_range = range(d.dimensions[ci.DIMENSIONS['t']].size)[10:12]
+        var_range = range(d.dimensions[dim_name].size)[5:7]
+    else:
+        t_range = range(d.dimensions[ci.DIMENSIONS['t']].size)
+        var_range = range(d.dimensions[dim_name].size)
 
     d.close()
 
@@ -231,9 +221,8 @@ if __name__ == '__main__':
         for p in params:
             res.append(structure_sizes(d, args.multiprocess, var_name, ci.RESCALE, axis, ci.PERIODIC, p))
 
-        print ("Done.")
         d.close()
-
+    logging.info("Array data processed. Preparing to write results to disk.")
     # Reorganize data for writing
     sizes = defaultdict(dict)
     for t, v in product(t_range, var_range):
@@ -242,3 +231,5 @@ if __name__ == '__main__':
     out_fname = '%s/%s_structure_sizes_%s.pickle' % (out_dir, var_key, k)
     with open(out_fname, 'w') as f:
         pickle.dump(sizes, f)
+
+    logging.info("Results written; process finished.")

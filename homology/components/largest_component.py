@@ -12,6 +12,7 @@ from itertools import product
 from functools import partial
 import multiprocessing as mp
 from collections import defaultdict
+import logging
 
 def process_arguments():
 
@@ -100,6 +101,8 @@ def largest_component(input_fname, multiprocess, varname, rescale, axis, periodi
     # Unpack parameters
     t, v = params
     
+    logging.info("Procesing plane for (t , v) = (%s, %s)" % (t, v))
+
     X = select_data(input_fname, multiprocess, varname, rescale, axis, t, v)
 
     # Variable range
@@ -129,9 +132,15 @@ if __name__ == '__main__':
     """
     Load file, separate components, calculate sizes.
     """
+    logging.basicConfig(filename='max_sizes.log', 
+        format='%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        level=logging.INFO)
 
     # TODO: add boolean flag to generate test data only (2 timesteps, two plane cross sections)
-    testdata = False
+    testdata = True
+    if testdata:
+        logging.warning('Computing test data.')
 
     args = process_arguments()
 
@@ -146,6 +155,8 @@ if __name__ == '__main__':
         ci = config.TEST
     else:
         raise ValueError("Invalid model environment selected.")
+
+    logging.info("Starting process.\n***   Model: %s    Simulation: %s    Variable: %s" % (args.env, args.s, args.varname))
     
     # Variable name
     var_key = args.varname
@@ -229,9 +240,8 @@ if __name__ == '__main__':
         for p in params:
             res.append(largest_component(d, args.multiprocess, var_name, ci.RESCALE, axis, ci.PERIODIC, args.n_intervals, p))
 
-        print ("Done.")
         d.close()
-
+    logging.info("Array data processed. Preparing to write results to disk.")
     # Reorganize data for writing
     sizes = defaultdict(dict)
     fractions = defaultdict(dict)
@@ -246,3 +256,5 @@ if __name__ == '__main__':
     out_fname = '%s/%s_max_structure_sizes.pickle' % (out_dir, var_key)
     with open(out_fname, 'w') as f:
         pickle.dump(out, f)
+
+    logging.info("Results written; process finished.")

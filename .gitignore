@@ -24,3 +24,5 @@ var/
 etc/
 *.stats
 *.pickle
+*.log
+homology/components/*.sh
