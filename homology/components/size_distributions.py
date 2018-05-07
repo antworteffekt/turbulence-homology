@@ -6,13 +6,14 @@ from netCDF4 import Dataset
 import argparse
 import os
 from homology.sampler import Sampler
-import pickle
+import cPickle as pickle
 import config
 from itertools import product
 from functools import partial
 import multiprocessing as mp
 from collections import defaultdict
 import logging
+import time
 
 def process_arguments():
 
@@ -93,7 +94,8 @@ def structure_sizes(input_fname, multiprocess, varname, rescale, axis, periodici
     # Unpack parameters
     t, v, threshold = params
     
-    logging.info("Procesing plane for (t , v) = (%s, %s)" % (t, v))
+    # if v % 20 == 0:
+    #     logging.info("Procesing plane for (t , v) = (%s, %s)" % (t, v))
 
     X = select_data(input_fname, multiprocess, varname, rescale, axis, t, v)
 
@@ -104,7 +106,8 @@ def structure_sizes(input_fname, multiprocess, varname, rescale, axis, periodici
         sampler = Sampler(X > threshold)
         sampler.connected_components(periodic=periodicity)
 
-    sizes = [x for x in sampler.uf.size if x != 0]
+    # Convert to Python int - this makes a dramatic difference in execution speed and memory size when writing to disk.
+    sizes = [int(x) for x in sampler.uf.size if x != 0]
     return {'time' : t,
             'var' : v,
             'threshold' : threshold,
@@ -122,7 +125,7 @@ if __name__ == '__main__':
 
     args = process_arguments()
     # TODO: add boolean flag to generate test data only (2 timesteps, two plane cross sections)
-    testdata = True
+    testdata = False
     if testdata:
         logging.warning('Computing test data.')
 
@@ -138,7 +141,8 @@ if __name__ == '__main__':
     else:
         raise ValueError("Invalid model environment selected.")
     
-    logging.info("Starting process.\n***   Model: %s    Simulation: %s    Variable: %s" % (args.env, args.s, args.varname))
+    logging.info("*** Starting process  ---  Model: %s    Simulation: %s    Variable: %s" % (args.env, args.s, args.varname))
+    t0 = time.time()
 
     # Variable name
     var_key = args.varname
@@ -178,7 +182,7 @@ if __name__ == '__main__':
     try:
         axis = d[var_name].dimensions.index(dim_name)
     except ValueError:
-        print ("Dimension name %s not found in dataset %s for variable %s. Trying alternate names ..." % 
+        logging.warning("Dimension name %s not found in dataset %s for variable %s. Trying alternate names ..." % 
             (dim_name, in_fname, var_name))
 
         if '%s_stag' % dim_name in d[var_name].dimensions:
@@ -222,7 +226,9 @@ if __name__ == '__main__':
             res.append(structure_sizes(d, args.multiprocess, var_name, ci.RESCALE, axis, ci.PERIODIC, p))
 
         d.close()
-    logging.info("Array data processed. Preparing to write results to disk.")
+
+    elapsed_time = time.time() - t0
+    logging.info("Array data processed in %s. Preparing to write results to disk." % time.strftime("%H:%m:%S", time.gmtime(elapsed_time)))
     # Reorganize data for writing
     sizes = defaultdict(dict)
     for t, v in product(t_range, var_range):
@@ -232,4 +238,5 @@ if __name__ == '__main__':
     with open(out_fname, 'w') as f:
         pickle.dump(sizes, f)
 
-    logging.info("Results written; process finished.")
+    elapsed_time = time.time() - t0
+    logging.info("Results written; process finished. Total time elapsed: %s ***\n\n" % time.strftime("%H:%m:%S", time.gmtime(elapsed_time)))

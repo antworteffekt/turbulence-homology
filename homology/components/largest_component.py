@@ -6,7 +6,7 @@ from netCDF4 import Dataset
 import argparse
 import os
 from homology.sampler import Sampler
-import pickle
+import cPickle as pickle
 import config
 from itertools import product
 from functools import partial
@@ -97,11 +97,14 @@ def largest_component(input_fname, multiprocess, varname, rescale, axis, periodi
     OUT
         list of integers representing the sizes of the connected components.
 
+    TODO:
+        Need to convert from Numpy int back to Python int here as well?
+
     """
     # Unpack parameters
     t, v = params
     
-    logging.info("Procesing plane for (t , v) = (%s, %s)" % (t, v))
+    # logging.info("Procesing plane for (t , v) = (%s, %s)" % (t, v))
 
     X = select_data(input_fname, multiprocess, varname, rescale, axis, t, v)
 
@@ -138,7 +141,7 @@ if __name__ == '__main__':
         level=logging.INFO)
 
     # TODO: add boolean flag to generate test data only (2 timesteps, two plane cross sections)
-    testdata = True
+    testdata = False
     if testdata:
         logging.warning('Computing test data.')
 
@@ -156,7 +159,7 @@ if __name__ == '__main__':
     else:
         raise ValueError("Invalid model environment selected.")
 
-    logging.info("Starting process.\n***   Model: %s    Simulation: %s    Variable: %s" % (args.env, args.s, args.varname))
+    logging.info("*** Starting process  ---  Model: %s    Simulation: %s    Variable: %s" % (args.env, args.s, args.varname))
     
     # Variable name
     var_key = args.varname
@@ -197,7 +200,7 @@ if __name__ == '__main__':
     try:
         axis = d[var_name].dimensions.index(dim_name)
     except ValueError:
-        print ("Dimension name %s not found in dataset %s for variable %s. Trying alternate names ..." % 
+        logging.warning("Dimension name %s not found in dataset %s for variable %s. Trying alternate names ..." % 
             (dim_name, in_fname, var_name))
 
         if '%s_stag' % dim_name in d[var_name].dimensions:
@@ -214,13 +217,10 @@ if __name__ == '__main__':
         t_range = range(d.dimensions[ci.DIMENSIONS['t']].size)[10:12]
         var_range = range(d.dimensions[dim_name].size)[5:7]
     else:
-        t_range = range(d.dimensions[ci.DIMENSIONS['t']].size)[10:11]
+        t_range = range(d.dimensions[ci.DIMENSIONS['t']].size)
         var_range = range(d.dimensions[dim_name].size)[:30]
 
     d.close()
-
-    # TODO :change the way threshold values are handled
-    k = thresholds.keys()[0]
 
     if args.multiprocess:
 
@@ -257,4 +257,4 @@ if __name__ == '__main__':
     with open(out_fname, 'w') as f:
         pickle.dump(out, f)
 
-    logging.info("Results written; process finished.")
+    logging.info("Results written; process finished. ***\n\n")
