@@ -2,10 +2,9 @@
 
 import numpy as np
 import time
-import shlex
-import subprocess
 from netCDF4 import Dataset
 import types
+from homology.util.extract import write_cubes, calculate_betti_numbers
 
 
 def binarize_array(X, threshold):
@@ -28,7 +27,6 @@ def vertical_profiles(filename, variable, out_dir, z_dim_name, t_dim_name, **kwa
     dataset = dataset_full[variable]
     z_range = dataset.shape[dataset.dimensions.index(z_dim_name)]
     t_range = dataset.shape[dataset.dimensions.index(t_dim_name)]
-    # t_range = 20
 
     start_time = time.time()
 
@@ -44,12 +42,13 @@ def vertical_profiles(filename, variable, out_dir, z_dim_name, t_dim_name, **kwa
         print "Timestep %d" % t
         Xt = dataset[t, :, :, :]
         for z in range(z_range):
-            X = Xt[z, :, :]
-            X = _binarize_array(X, threshold=threshold)
-
+            X = np.array(Xt[z, :, :])
+            X = X > threshold
+            # X = binarize_array(X, threshold=threshold)
+            dims = X.shape
             # "positive" domain: X == 1
             write_cubes(X, out_fname, pos_value=1)
-            betti = calculate_betti_numbers(out_fname)
+            betti = calculate_betti_numbers(out_fname, dims)
             if betti is not None:
                 profiles_0_pos[t, z] = betti[0]
                 profiles_1_pos[t, z] = betti[1]
@@ -63,7 +62,7 @@ def vertical_profiles(filename, variable, out_dir, z_dim_name, t_dim_name, **kwa
 
         elapsed_time = time.time() - start_time
         print "done. Time elapsed: %.3f" % elapsed_time
-
+    dataset_full.close()
     # return (profiles_0_pos, profiles_1_pos, profiles_0_neg, profiles_1_neg)
     return (profiles_0_pos, profiles_1_pos)
     # return (profiles_0_neg, profiles_1_neg)
