@@ -55,9 +55,8 @@ class UnionFind:
         '''
         Insert a sequence of objects into the structure.  All must be Python hashable.
         '''
-        # print "INSERT objects: %s" % str(objects)
         for object in objects:
-            self.find(object, **kwargs)
+            self.find(object)
 
     def find(self, object, **kwargs):
         '''
@@ -65,17 +64,16 @@ class UnionFind:
         If the object was not known, will make it known, and it becomes its own set.
         Object must be Python hashable.
         '''
-        # print "FIND object: %s" % str(object)
-        value = kwargs.get('value', 1)
-        # print "FIND input -- %s" % str(x)
+        value = 1
         
         if object not in self.objects_to_num:
-            # print "object value %s" % str(value)
+            print "new element:" , object
             obj_num = len(self.objects_to_num)
             self.num_weights[obj_num] = value
             self.objects_to_num[object] = obj_num
             self.num_to_objects[obj_num] = object
             self.parent_pointers[obj_num] = obj_num
+            print "returning: ", object, " of ", type(object)
             return object
         stk = [self.objects_to_num[object]]
         par = self.parent_pointers[stk[-1]] 
@@ -92,7 +90,6 @@ class UnionFind:
         Both objects must be Python hashable.
         If either or both objects are unknown, will make them known, and combine them.
         '''
-        # print "entering UNION..."
         o1p = self.find(object1)
         o2p = self.find(object2)
         if o1p != o2p:
@@ -190,7 +187,7 @@ class UnionFindOpt(object):
 if __name__ == '__main__':
 
     uf = UnionFindOpt(11)
-    print "parents at start: %s" % uf.parent
+    print("parents at start: %s" % uf.parent)
     uf.union(0, 1)
     uf.union(2, 1)
     uf.union(3, 1)
