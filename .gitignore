@@ -26,3 +26,4 @@ etc/
 *.pickle
 *.log
 homology/components/*.sh
+**/config.py
