@@ -63,22 +63,31 @@ def plot_barcodes(ax, intervals, param_dict={}):
         i += 1
     return out
 
-def plot_barcodes_h0_h1(ax, intervals, param_dict={}):
-    # Requires a dict of arrays as produced by extract.persistence_intervals_to_array
+def plot_barcodes_h0_h1(ax, intervals, plot_infinite_intervals=False, param_dict={}):
+    # Requires a dict of lists as produced by extract.parse_output
     colors = ['tab:green', 'tab:red', 'tab:purple', 'tab:blue', 'tab:orange']
 
-    n_intervals = sum([x.shape[0] for x in intervals.values()])
-    max_value = max([np.amax(x) for x in intervals.values()])
-
-    ax.set_ylim((-5, n_intervals + 1))
-    ax.set_xlim((0, max_value))
+    n_intervals = sum([len(v) for k, v in intervals.items() if k != 'value_range'])
+    # Remove the dict entry for value range and store the tuple
+    value_range = intervals.pop('value_range')
+    # max_value = value_range[1]
+    ax.set_ylim([-5, n_intervals + 1])
+    if plot_infinite_intervals:
+        ax.set_xlim([value_range[0], value_range[1]])
+    else:
+        ends = [x for sublist in intervals.values() for x in sublist]
+        ends = [x[1] for x in ends if len(x) > 1]
+        ax.set_xlim([value_range[0], max(ends) * 1.05])
 
     idx = 0
     c = 0
     for k, d in intervals.iteritems():
-        identifier = k.split('intervals in ')[1]
+        identifier = 'dim %s' % k
         for interval in d:
-            # print interval
+            if len(interval) == 1 and plot_infinite_intervals:
+                interval = (interval[0], value_range[1])
+            elif len(interval) == 1:
+                continue
             out = ax.plot((interval[0], interval[1]), (idx, idx), color=colors[c], linestyle='solid',
                            label=identifier)
             idx += 1

@@ -4,6 +4,9 @@ import numpy as np
 from netCDF4 import Dataset
 from itertools import islice
 from ast import literal_eval
+import subprocess
+import shlex
+import StringIO
 
 def array_to_cubes(X, path_to_outfile):
     """ Convert a numpy array to cube file format and write to disk.
@@ -71,7 +74,7 @@ def write_cubes_timeblock(X, pos_value, out_fname, **kwargs):
     outfile.close()
 
 
-def calculate_betti_numbers(fname):
+def calculate_betti_numbers(fname, dims):
     """
     Given a file with a list of cubes, calculate its betti numbers and return them.
     """
@@ -81,7 +84,7 @@ def calculate_betti_numbers(fname):
     n_lines = subprocess.check_output(args)
     n_lines = int(n_lines.split(' ')[0])
     if n_lines > 1:
-        command_string = 'chomp %s' % fname
+        command_string = 'chomp -w %d -w %d %s' % (dims[0], dims[1], fname)
         args = shlex.split(command_string)
         betti_numbers = subprocess.check_output(args)
         return [int(x) for x in betti_numbers.split(' ')]
@@ -129,5 +132,49 @@ def persistence_intervals_to_array(filename):
     return pi_arrays
 
 
+def persistence_intervals(X, ripser_bin, dim):
+    
+    x_str = StringIO.StringIO()
+    np.savetxt(x_str, X, delimiter=',')
+    args = [ripser_bin, '--format', 'point-cloud', '--dim', str(dim)]
+    p = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
+                         stderr=subprocess.STDOUT)
+    ripser_out = p.communicate(input=x_str.getvalue())[0]
+    return ripser_out
+
+
+def parse_output(pi_str):
+    
+    persistence_intervals = {}
+    pi_str = pi_str.split('\n')
+    value_range = pi_str[2].split(': ')[1]
+    # Remove brackets
+    value_range = value_range[1:-1]
+    value_range = (float(value_range.split(',')[0]), float(value_range.split(',')[1]))
+    persistence_intervals['value_range'] = value_range
+    
+    dim_strings = [s for s in pi_str if s.startswith('persistence intervals in dim')]
+    dim_idx = [pi_str.index(s) for s in dim_strings]
+    dim_idx.append(-1)
+    for i in range(1, len(dim_idx)):
+
+        intervals = pi_str[dim_idx[i-1]:dim_idx[i]]
+        identifier = intervals.pop(0).replace(':', '')[-1]
+        inf_intervals = [s for s in intervals if s.endswith(', )')]
+        intervals = [s for s in intervals if not s.endswith(', )')]
+        
+        # Remove brackets
+        intervals = map(lambda x: x.replace('[', ''), intervals)
+        intervals = map(lambda x: x[:-1], intervals)
+        intervals = [(float(s.split(',')[0]), float(s.split(',')[1])) for s in intervals]
+        # Add infinite intervals, if present:
+        if inf_intervals:
+            inf_intervals = map(lambda x: x.replace('[', ''), inf_intervals)
+            inf_intervals = map(lambda x: x[:-1], inf_intervals)
+            inf_intervals = [(float(s.split(',')[0]), ) for s in inf_intervals]
+            intervals = inf_intervals + intervals
+        persistence_intervals[identifier] = intervals
+    
+    return persistence_intervals
 
 

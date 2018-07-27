@@ -11,7 +11,7 @@ class Sampler(object):
     TODO: implement destructor (?)
     """
 
-    def __init__(self, X):
+    def __init__(self, X, sample_ratio=0.05):
         # self.uf = UnionFind()
         # The following assumes the array is already binary!
         assert(X.dtype == 'bool')
@@ -22,7 +22,7 @@ class Sampler(object):
         # print self.keys
         self.X = X
         self.components = None
-        self.sample_ratio = 0.05
+        self.sample_ratio = sample_ratio
 
     def connected_components(self, connectivity='four', periodic=None):
         """
@@ -35,13 +35,12 @@ class Sampler(object):
         # Check that there are actually elements in the domain, if not then do
         # nothing
         if np.where(self.X)[0].size == 0:
-            print "Empty array, no components to split."
+            print("Empty array, no components to split.")
             return
 
         if connectivity == 'four':
 
             it = np.nditer(self.X, flags=['multi_index'])
-
             if periodic is None:
                 for x in it:
                     if x:
@@ -73,18 +72,30 @@ class Sampler(object):
                         below = tuple(map(lambda x, y: x + y, it.multi_index, (-1, 0)))
                         below = (below[0] % self.X.shape[0], below[1])
                         if self.X[below]:
-                            # Wrap around axis
                             self.uf.union(self.keys[it.multi_index], self.keys[below])
-                        
+
         elif connectivity == 'eight':
             raise NotImplementedError
         else:
             raise ValueError('Unknown connectivity type %s.' % connectivity)
 
+        # second pass
         it = np.nditer(np.arange(self.n), flags=['c_index'])
         for x in it:
             # print x
             self.uf.find(x)
+        # After this we can invert the parent_pointers dict and convert to array coordinates
+        self.components = {k:[] for k in set(self.uf.parent)}
+        for k, v in self.keys.items():
+            parent = self.uf.parent[v]
+            self.components[parent].append(k)
+        # inverted_parents = {}
+        # for k, v in self.uf.parent_pointers.iteritems():
+        #     keys = inverted_parents.setdefault(self.uf.num_to_objects.get(v), [])
+        #     keys.append(self.uf.num_to_objects.get(k))
+        # # Convert the lists to numpy arrays
+        # for k, v in inverted_parents.iteritems():
+        #     self.components[k] = np.array(v)
 
     def sample(self, points, sample_ratio=0.05, dest=None):
         """
@@ -117,6 +128,7 @@ class Sampler(object):
             for i in range(n_samples):
                 sample_i = np.empty((0, 2))
                 for component in self.components.values():
+                    component = np.array(component)
                     component_sample = self.sample(
                         component, self.sample_ratio)
                     sample_i = np.vstack((sample_i, component_sample))
