@@ -46,8 +46,8 @@ class MergeTree(object):
             if it[0]:
                 # Pass both the array coordinates and the array value to find
                 cell_parent = self.uf.insert_objects([it.multi_index], value=X[it.multi_index])
-                print type(cell_parent)
-                print 'Cell: %s  --- parent: %s' % (it.multi_index, cell_parent)
+                # print type(cell_parent)
+                # print 'Cell: %s  --- parent: %s' % (it.multi_index, cell_parent)
                 # Check for connectivity behind and below only - this works because
                 # we assume a two-dimensional array structure
                 # Periodicity should affect only the lookup of the cell "behind".
@@ -320,3 +320,121 @@ class MergeTree(object):
         return fig, ax
         # fig.show()
 
+
+def find_root(n, tree, root_list):
+    if n not in root_list:
+        return find_root(tree.uf.parent_pointers[n], tree, root_list)
+    else:
+        return n
+
+
+def update_parent_pointers(tree):
+
+    A = set(tree.uf.parent_pointers.values())
+    B = set(tree.uf.num_weights.keys())
+
+    diff = A - B
+    if len(diff) == 0:
+        return
+    for n in diff:
+        map(tree.uf.find,
+            [tree.uf.num_to_objects[k] for k, v in tree.uf.parent_pointers.items()
+             if v == n])
+
+
+def calculate_wsquared_level(X, tree):
+
+    # Number of height levels
+    n_levels = X.shape[0]
+    levels = range(n_levels)
+    components_values = {k: [0]*n_levels for k in set(tree.uf.num_weights.keys())}
+
+    for l in levels:
+        level_cells = {k: tree.uf.parent_pointers[v]
+                       for k, v in tree.uf.objects_to_num.items() if k[0] == l}
+        for k, v in level_cells.items():
+            try:
+                components_values[v][l] += X[k] ** 2
+            except KeyError:
+                key_cell = tree.uf.num_to_objects[v]
+                parent = tree.uf.objects_to_num[tree.uf.find(key_cell)]
+                components_values[parent][l] += X[k] ** 2
+
+    return components_values
+
+
+def calculate_wb_level(W, T, tree):
+
+    # Number of height levels
+    n_levels = W.shape[0]
+    levels = range(n_levels)
+    components_values = {k: [0]*n_levels for k in set(tree.uf.num_weights.keys())}
+
+    for l in levels:
+        level_cells = {k: tree.uf.parent_pointers[v]
+                       for k, v in tree.uf.objects_to_num.items() if k[0] == l}
+        for k, v in level_cells.items():
+            try:
+                components_values[v][l] += W[k] * T[k]
+            except KeyError:
+                key_cell = tree.uf.num_to_objects[v]
+                parent = tree.uf.objects_to_num[tree.uf.find(key_cell)]
+                components_values[parent][l] += W[k] * T[k]
+
+    return components_values
+
+
+def calculate_variables_level(W, T, tree):
+
+    # Number of height levels:
+    n_levels = W.shape[0]
+    levels = range(n_levels)
+    w_squared_level = {k: np.zeros(n_levels) for k in set(tree.uf.num_weights.keys())}
+    wt_level = {k: np.zeros(n_levels) for k in set(tree.uf.num_weights.keys())}
+    sizes_level = {k: np.zeros(n_levels) for k in set(tree.uf.num_weights.keys())}
+
+    for l in levels:
+        level_cells = {k: tree.uf.parent_pointers[v]
+                       for k, v in tree.uf.objects_to_num.items() if k[0] == l}
+        counts = Counter(level_cells.values())
+        for k, v in level_cells.items():
+            try:
+                w_squared_level[v][l]  += W[k] ** 2
+                wt_level[v][l] += W[k] * T[k]
+                sizes_level[v][l] = counts[v]
+            except KeyError:
+                key_cell = tree.uf.num_to_objects[v]
+                parent = tree.uf.objects_to_num[tree.uf.find(key_cell)]
+                w_squared_level[parent][l] += W[k] ** 2
+                wt_level[parent][l] += W[k] * T[k]
+                sizes_level[parent][l] = counts[v]
+
+    return (w_squared_level, wt_level, sizes_level)
+
+
+def calculate_sizes_level(X, tree):
+
+    # Number of height levels
+    n_levels = X.shape[0]
+    levels = range(n_levels)
+    sizes = {k: np.zeros(n_levels) for k in set(tree.uf.parent_pointers.values())}
+
+    for l in levels:
+        level_cells = {k: tree.uf.parent_pointers[v]
+                       for k, v in tree.uf.objects_to_num.items() if k[0] == l}
+        counts = Counter(level_cells.values())
+        for k, v in counts.items():
+            sizes[k][l] = v
+
+    A = set(tree.uf.parent_pointers.values())
+    B = set(tree.uf.num_weights.keys())
+    diff = A - B
+    update_map = {k: find_root(k, tree, B) for k in diff}
+    components_sizes = {k: np.zeros(n_levels) for k in tree.uf.num_weights.keys()}
+    for k, v in sizes.items():
+        if k in components_sizes.keys():
+            components_sizes[k] += v
+        else:
+            components_sizes[update_map[k]] += v
+
+    return components_sizes

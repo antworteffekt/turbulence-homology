@@ -56,7 +56,7 @@ class UnionFind:
         Insert a sequence of objects into the structure.  All must be Python hashable.
         '''
         for object in objects:
-            self.find(object)
+            return self.find(object)
 
     def find(self, object, **kwargs):
         '''
@@ -67,16 +67,14 @@ class UnionFind:
         value = 1
         
         if object not in self.objects_to_num:
-            print "new element:" , object
             obj_num = len(self.objects_to_num)
             self.num_weights[obj_num] = value
             self.objects_to_num[object] = obj_num
             self.num_to_objects[obj_num] = object
             self.parent_pointers[obj_num] = obj_num
-            print "returning: ", object, " of ", type(object)
             return object
         stk = [self.objects_to_num[object]]
-        par = self.parent_pointers[stk[-1]] 
+        par = self.parent_pointers[stk[-1]]
         while par != stk[-1]:
             stk.append(par)
             par = self.parent_pointers[par]
