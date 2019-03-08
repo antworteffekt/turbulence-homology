@@ -149,3 +149,7 @@ def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
     plt.register_cmap(cmap=newcmap)
 
     return newcmap
+
+
+def get_middle(xx):
+    return 1 - (np.amax(xx) / (np.amax(xx) + abs(np.amin(xx))))

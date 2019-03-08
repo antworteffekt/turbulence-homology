@@ -42,19 +42,20 @@ class Sampler(object):
 
             it = np.nditer(self.X, flags=['multi_index'])
             if periodic is None:
-                for x in it:
-                    if x:
-                        # Check for connectivity - this is essentially as in building a merge tree, except
-                        # that we don't care for actual mergers, only the end
-                        # result.
-                        behind = tuple(map(lambda x, y: x + y, it.multi_index, (0, -1)))
+                raise NotImplementedError("Need to update this")
+                # for x in it:
+                #     if x:
+                #         # Check for connectivity - this is essentially as in building a merge tree, except
+                #         # that we don't care for actual mergers, only the end
+                #         # result.
+                #         behind = tuple(map(lambda x, y: x + y, it.multi_index, (0, -1)))
 
-                        if not any(n < 0 for n in behind) and self.X[behind]:
-                            self.uf.union(self.keys[it.multi_index], self.keys[behind])
+                #         if not any(n < 0 for n in behind) and self.X[behind]:
+                #             self.uf.union(self.keys[it.multi_index], self.keys[behind])
 
-                        below = tuple(map(lambda x, y: x + y, it.multi_index, (-1, 0)))
-                        if not any(n < 0 for n in below) and self.X[below]:
-                            self.uf.union(self.keys[it.multi_index], self.keys[below])
+                #         below = tuple(map(lambda x, y: x + y, it.multi_index, (-1, 0)))
+                #         if not any(n < 0 for n in below) and self.X[below]:
+                #             self.uf.union(self.keys[it.multi_index], self.keys[below])
             elif periodic == 'both':
                 # Do essentially the same thing but suppress checking for
                 # negatives in behind and below directions

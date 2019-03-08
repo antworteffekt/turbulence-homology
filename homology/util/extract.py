@@ -6,7 +6,7 @@ from itertools import islice
 from ast import literal_eval
 import subprocess
 import shlex
-import StringIO
+from io import StringIO
 
 def array_to_cubes(X, path_to_outfile):
     """ Convert a numpy array to cube file format and write to disk.
@@ -44,7 +44,7 @@ def write_cubes(X, out_fname, pos_value=1, **kwargs):
     # just assume that 1 is the target value for now
     X_ = np.where(X == pos_value)
     # create the string object with the appropriate data
-    X_ = str(zip(X_[0], X_[1]))
+    X_ = str(list(zip(X_[0], X_[1])))
     # clean up the string a bit
     X_ = X_.replace('[', '').replace(']', '')
     X_ = X_.replace('), ', ')\n')
@@ -63,7 +63,7 @@ def write_cubes_timeblock(X, pos_value, out_fname, **kwargs):
     # just assume that 100 is the target value for now
     X_ = np.where(X == pos_value)
     # create the string object with the appropriate data
-    X_ = str(zip(X_[0], X_[1], X_[2]))
+    X_ = str(list(zip(X_[0], X_[1], X_[2])))
     # clean up the string a bit
     X_ = X_.replace('[', '').replace(']', '')
     X_ = X_.replace('), ', ')\n')
@@ -74,21 +74,25 @@ def write_cubes_timeblock(X, pos_value, out_fname, **kwargs):
     outfile.close()
 
 
-def calculate_betti_numbers(fname, dims):
+def calculate_betti_numbers(fname, periodic=False, dims=(100,100)):
     """
     Given a file with a list of cubes, calculate its betti numbers and return them.
     """
     # Check if the file actually contains data
     lines_command_string = 'wc -l %s' % fname
     args = shlex.split(lines_command_string)
-    n_lines = subprocess.check_output(args)
+    n_lines = subprocess.check_output(args).decode('utf-8')
     n_lines = int(n_lines.split(' ')[0])
     if n_lines > 1:
-        command_string = 'chomp -w %d -w %d %s' % (dims[0], dims[1], fname)
+        if periodic:
+            command_string = 'chomp -w %d -w %d %s' % (dims[0], dims[1], fname)
+        else:
+            command_string = 'chomp %s' % fname
         args = shlex.split(command_string)
-        betti_numbers = subprocess.check_output(args)
+        betti_numbers = subprocess.check_output(args).decode('utf-8')
         return [int(x) for x in betti_numbers.split(' ')]
     else:
+        print('None...')
         return None
 
 def persistence_intervals_to_array(filename):
@@ -132,12 +136,15 @@ def persistence_intervals_to_array(filename):
     return pi_arrays
 
 
-def persistence_intervals(X, ripser_bin, dim):
+def persistence_intervals(X, ripser_bin, dim, data_format='point-cloud', modulus=2):
     
     x_str = StringIO.StringIO()
     np.savetxt(x_str, X, delimiter=',')
-    args = [ripser_bin, '--format', 'point-cloud', '--dim', str(dim)]
-    p = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
+    # Validate data format
+    if not data_format in ['point-cloud', 'distance']:
+        raise ValueError("Data format not understood: %s" % data_format)
+    args = [ripser_bin, '--format', data_format, '--dim', str(dim), '--modulus', str(modulus)]
+    p = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
     ripser_out = p.communicate(input=x_str.getvalue())[0]
     return ripser_out

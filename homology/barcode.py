@@ -9,6 +9,9 @@ from __future__ import print_function
 from homology.interval import Interval
 import re
 from collections import OrderedDict
+import numpy as np
+import subprocess
+import StringIO
 
 class Barcode:
 
@@ -19,6 +22,8 @@ class Barcode:
         self.value_range = value_range
         self.max_dim = max_dim
         self.intervals = {}
+        self.additive_persistence = {}
+        self.multiplicative_persistence = {}
 
     def __repr__(self):
 
@@ -31,16 +36,56 @@ class Barcode:
             intervals_str += 'Dimension {} : {} intervals\n'.format(k, len(v))
         return(barcode_str + intervals_str)
 
+
+    def __str__(self):
+        string_rep = ''
+        value_range = str(self.value_range)
+        value_range = value_range.replace('(', '[')
+        value_range = value_range.replace(')', ']')
+        string_rep += "value range: %s" % value_range
+        i = 0
+        for dim in self.intervals.values():
+            string_rep += "\npersistence intervals in dim %d:\n" % i
+            i += 1
+            # Remove first and last characters
+            dim = str(dim)[1:-1]
+            dim = dim.replace('(', '[')
+            dim = dim.replace(', [', '\n[')
+            string_rep += dim
+        return string_rep
+
     def __getitem__(self, dim):
         if dim not in self.intervals.keys():
             raise IndexError(
                 'Intervals for dimension {} not found in barcode.'.format(dim))
         return self.intervals[dim]
 
+    def compute(self, data, dim=1, data_format='point-cloud'):
+        # Compute and parse in one call
+        intervals = self.persistence_intervals(data, '/home/licon/src/ripser/ripser', dim, data_format)
+        self.parse_ripser_output(intervals)
+
+    def persistence_intervals(self, X, ripser_bin, dim, data_format='point-cloud'):
+    
+        x_str = StringIO.StringIO()
+        np.savetxt(x_str, X, delimiter=',')
+        # Validate data format
+        if not data_format in ['point-cloud', 'distance']:
+            raise ValueError("Data format not understood: %s" % data_format)
+        args = [ripser_bin, '--format', data_format, '--dim', str(dim)]
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
+                             stderr=subprocess.STDOUT)
+        ripser_out = p.communicate(input=x_str.getvalue())[0]
+        return ripser_out
+
     def parse_ripser_output(self, barcode_str):
 
         barcode_str = barcode_str.split('\n')
-        value_range = barcode_str[2].split(': ')[1]
+        if barcode_str[2].startswith('value'):
+            # Assume the value range is given in position 2
+            value_range = barcode_str[2].split(': ')[1]
+        elif barcode_str[1].startswith('value'):
+            value_range = barcode_str[1].split(': ')[1]
         # Remove brackets
         value_range = value_range[1:-1]
         value_range = (float(value_range.split(',')[0]), float(
@@ -80,13 +125,15 @@ class Barcode:
                 intervals = inf_intervals + intervals
             self.intervals[identifier] = intervals
 
-    def plot(self, ax, plot_infinite_intervals=False):
+    def plot(self, ax, dimensions=None, plot_infinite_intervals=False):
         # Requires a dict of lists as produced by extract.parse_output
-        colors = ['tab:green', 'tab:red',
-                  'tab:purple', 'tab:blue', 'tab:orange']
-
-        n_intervals = sum([len(v) for k, v in self.intervals.items()])
-        ax.set_ylim([-5, n_intervals + 1])
+        # colors = ['tab:red', 'tab:blue',
+        #           'tab:purple', 'tab:green', 'tab:orange']
+        colors = {0: 'forestgreen',
+                  1: 'red',
+                  2: 'tab:purple',
+                  3: 'tab:green',
+                  4: 'tab:orange'}
 
         if plot_infinite_intervals:
             ax.set_xlim([self.value_range[0], self.value_range[1]])
@@ -97,17 +144,37 @@ class Barcode:
 
         idx = 0
         c = 0
-        for k, d in self.intervals.iteritems():
-            identifier = 'dim %s' % k
-            for interval in d:
-                if len(interval) == 1 and plot_infinite_intervals:
-                    interval = (interval[0], self.value_range[1])
-                elif len(interval) == 1:
-                    continue
-                out = ax.plot((interval[0], interval[1]), (idx, idx), color=colors[c], linestyle='solid',
-                              lw=0.99, alpha=0.7, label=identifier)
-                idx += 1
-            c += 1
+        if dimensions is None:
+            # Plot intervals in all dimensions
+            n_intervals = sum([len(v) for k, v in self.intervals.items()])
+            ax.set_ylim([-5, n_intervals + 1])
+            for k, d in self.intervals.iteritems():
+                identifier = 'dim %s' % k
+                for interval in d:
+                    if len(interval) == 1 and plot_infinite_intervals:
+                        interval = (interval[0], self.value_range[1])
+                    elif len(interval) == 1:
+                        continue
+                    out = ax.plot((interval[0], interval[1]), (idx, idx), color=colors[k], linestyle='solid',
+                                  lw=0.99, alpha=0.9, label=identifier)
+                    idx += 1
+                c += 1
+        else:
+            # Plot only the specified dimensions
+            subintervals = {k: self.intervals[k] for k in dimensions if k in self.intervals}
+            n_intervals = sum([len(v) for k, v in subintervals.items()])
+            ax.set_ylim([-5, n_intervals + 1])
+            for k, d in subintervals.iteritems():
+                identifier = 'dim %s' % k
+                for interval in d:
+                    if len(interval) == 1 and plot_infinite_intervals:
+                        interval = (interval[0], self.value_range[1])
+                    elif len(interval) == 1:
+                        continue
+                    out = ax.plot((interval[0], interval[1]), (idx, idx), color=colors[k], linestyle='solid',
+                                  lw=0.99, alpha=0.9, label=identifier)
+                    idx += 1
+                c += 1
         # The following lines remove all duplicate values in handles and labels
         # before passing them to legend()
         handles, labels = ax.get_legend_handles_labels()
@@ -116,6 +183,59 @@ class Barcode:
         ax.get_yaxis().set_visible(False)
         return out
 
+    def to_string(self):
+        # if barcode is None:
+        #     return 'None'
+        string_rep = ''
+        value_range = str(self.value_range)
+        value_range = value_range.replace('(', '[')
+        value_range = value_range.replace(')', ']')
+        string_rep += "value range: %s" % value_range
+        i = 0
+        for dim in self.intervals:
+            string_rep += "\npersistence intervals in dim %d:\n" % i
+            i += 1
+            # Remove first and last characters
+            dim = str(dim)[1:-1]
+            dim = dim.replace('(', '[')
+            dim = dim.replace(', [', '\n[')
+            string_rep += dim
+        return string_rep
+
+    def S_a(self, xs, dim):
+        """
+        Evaluate the feature-counting invariant for additive persistence.
+        """
+        # If persistence values have not been precomputed, compute them now. Sort the resulting array.
+        try:
+            if not bool(self.additive_persistence):
+                self.additive_persistence = {
+                    k : np.sort(np.array([x[1] - x[0] for x in v if len(x) > 1])) for k, v in self.intervals.iteritems()
+                }
+        except AttributeError:
+            self.additive_persistence = {
+                    k : np.sort(np.array([x[1] - x[0] for x in v if len(x) > 1])) for k, v in self.intervals.iteritems()
+                }
+        ys = np.sum(self.additive_persistence[dim] > xs[:, None], axis=1)
+        return ys
+
+    def S_p(self, xs, dim):
+        """
+        Evaluate the feature-counting invariant for multiplicative persistence.
+        """
+        # If persistence values have not been precomputed, compute them now. Sort the resulting array.
+        try:
+            if not bool(self.multiplicative_persistence):
+                self.multiplicative_persistence = {
+                    k : [x[1] / x[0] for x in v if x[0] > 1e-10] for k, v in self.intervals.iteritems() if k > 0
+                }
+        except AttributeError:
+            self.multiplicative_persistence = {
+                    k : [x[1] / x[0] for x in v if x[0] > 1e-10] for k, v in self.intervals.iteritems() if k > 0
+                }
+
+        ys = np.sum(self.multiplicative_persistence[dim] > xs[:, None], axis=1)
+        return ys
 
 if __name__ == '__main__':
 

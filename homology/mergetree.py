@@ -154,8 +154,9 @@ class MergeTree(object):
 
         if return_graph:
             return G
-
-    def build_merge_tree_3d(self, X, periodic=False, return_graph=False, iter_dim=0, flip=False, **kwargs):
+    # @profile
+    def build_merge_tree_3d(self, X, periodic=False, return_graph=False, iter_dim=0, flip=False,
+                            clear_uf=False, **kwargs):
         """
         This is ridiculous - find a way to join this with the above function
         """
@@ -236,6 +237,8 @@ class MergeTree(object):
                     else:  # there is just one root below
                         self.uf.union(level_parent, below_parent[0], elder_rule=True)
 
+                # print current_level
+                # print self.uf.objects_to_num
                 level_coords = [x for x in self.uf.objects_to_num.keys() if x[0] == current_level]
                 level_parents = [self.uf.find(x) for x in level_coords]
 
@@ -266,6 +269,14 @@ class MergeTree(object):
                         if new_parent != cell:
                             # Merger event, add node
                             self.mergers[cell] = (prev_level, new_parent)
+                            # Update values to new parent
+                            children = [k for k, v in self.uf.parent_pointers.items() if v == self.uf.objects_to_num[cell]]
+                            # print 'updating %d values ' % len(children)
+                            for k in children:
+                                self.uf.parent_pointers[k] = self.uf.objects_to_num[new_parent]
+                            # if cell == (3, 199, 85):
+                            #     print 'YOOT'
+                            #     print 'cell - new parent', cell, new_parent
                             if return_graph:
                                 merge_node = (current_level, new_parent[1], new_parent[2])
                                 G.add_node(merge_node, type='merge', level=current_level)
@@ -279,7 +290,50 @@ class MergeTree(object):
                                 G.add_edge(cell, end_node)
                 # Reset the below_joins dictionary
                 below_joins.clear()
-
+                # Delete superfluous information
+                if clear_uf and current_level >= 2:
+                    # print "*************\nLevel %d finished" % current_level
+                    # elem = (3, 199, 85)
+                    # try:
+                    z_2 = [self.uf.num_to_objects[v] for k, v in self.uf.objects_to_num.items() if k[0] == current_level-2]
+                    # if (3, 199, 85) in z_2:
+                    #     print "WTF"
+                    # except KeyError:
+                    #     print current_level
+                    #     print z_2
+                    #     print self.uf.num_to_objects
+                    #     raise
+                    # print "Level z-2 has %d elements" % len(z_2)
+                    # print "finding non roots, level %d" % current_level
+                    # print set([k[0] for k in z_2])
+                    # if current_level >= 3:
+                        # print 'num. children of (3, 199, 85): ', len([k for k, v in self.uf.parent_pointers.items() if v == self.uf.objects_to_num[(3, 199, 85)]])
+                        # print 'identifier: ', self.uf.objects_to_num[elem], 'element: ', elem
+                        # print ' *** parent: ***', self.uf.find(elem)
+                    non_roots = [x for x in z_2 if x != self.uf.find(x)]
+                    # roots = [x for x in z_2 if x == self.uf.find(x)]
+                    # print '%d roots found ' % len(roots), roots
+                    # print "Non-root elements: %d" % len(non_roots)
+                    # print non_roots
+                    for t in non_roots:
+                        # self.uf.find(t)
+                        identifier = self.uf.objects_to_num.pop(t)
+                        # if identifier == 568144:
+                        #     print 'element deleted at level ', current_level
+                        #     print identifier, ' --- ', t
+                        self.uf.num_to_objects.pop(identifier)
+                        self.uf.parent_pointers.pop(identifier)
+                    # print '************'
+        # Clear the last two levels
+        if clear_uf:
+            levels = X.shape[0]-1, X.shape[0]-2
+            for z in levels:
+                zz = [self.uf.num_to_objects[v] for k, v in self.uf.objects_to_num.items() if k[0] == z]
+                non_roots = [x for x in zz if x != self.uf.find(x)]
+                for t in non_roots:
+                    identifier = self.uf.objects_to_num.pop(t)
+                    self.uf.num_to_objects.pop(identifier)
+                    self.uf.parent_pointers.pop(identifier)
         if return_graph:
             return G
 
@@ -389,27 +443,64 @@ def calculate_variables_level(W, T, tree):
     # Number of height levels:
     n_levels = W.shape[0]
     levels = range(n_levels)
-    w_squared_level = {k: np.zeros(n_levels) for k in set(tree.uf.num_weights.keys())}
-    wt_level = {k: np.zeros(n_levels) for k in set(tree.uf.num_weights.keys())}
-    sizes_level = {k: np.zeros(n_levels) for k in set(tree.uf.num_weights.keys())}
+    # w_squared_level = {k: np.zeros(n_levels) for k in set(tree.uf.num_weights.keys())}
+    # wt_level = {k: np.zeros(n_levels) for k in set(tree.uf.num_weights.keys())}
+    # sizes_level = {k: np.zeros(n_levels) for k in set(tree.uf.num_weights.keys())}
+    w_squared_level = {k: np.zeros(n_levels) for k in set(tree.uf.parent_pointers.values())}
+    wt_level = {k: np.zeros(n_levels) for k in set(tree.uf.parent_pointers.values())}
+    sizes_level = {k: np.zeros(n_levels) for k in set(tree.uf.parent_pointers.values())}
 
     for l in levels:
         level_cells = {k: tree.uf.parent_pointers[v]
                        for k, v in tree.uf.objects_to_num.items() if k[0] == l}
         counts = Counter(level_cells.values())
+        # for k, v in level_cells.items():
+        #     try:
+        #         w_squared_level[v][l]  += W[k] ** 2
+        #         wt_level[v][l] += W[k] * T[k]
+        #         sizes_level[v][l] = counts[v]
+        #     except KeyError:
+        #         key_cell = tree.uf.num_to_objects[v]
+        #         parent = tree.uf.objects_to_num[tree.uf.find(key_cell)]
+        #         w_squared_level[parent][l] += W[k] ** 2
+        #         wt_level[parent][l] += W[k] * T[k]
+        #         sizes_level[parent][l] = counts[v]
+        for k, v in counts.items():
+            sizes_level[k][l] = v
         for k, v in level_cells.items():
-            try:
-                w_squared_level[v][l]  += W[k] ** 2
-                wt_level[v][l] += W[k] * T[k]
-                sizes_level[v][l] = counts[v]
-            except KeyError:
-                key_cell = tree.uf.num_to_objects[v]
-                parent = tree.uf.objects_to_num[tree.uf.find(key_cell)]
-                w_squared_level[parent][l] += W[k] ** 2
-                wt_level[parent][l] += W[k] * T[k]
-                sizes_level[parent][l] = counts[v]
+            w_squared_level[v][l]  += W[k] ** 2
+            wt_level[v][l] += W[k] * T[k]
 
-    return (w_squared_level, wt_level, sizes_level)
+    A = set(tree.uf.parent_pointers.values())
+    B = set(tree.uf.num_weights.keys())
+    diff = A - B
+    update_map = {k: find_root(k, tree, B) for k in diff}
+    w_squared = {k: np.zeros(n_levels) for k in tree.uf.num_weights.keys()}
+    wt = {k: np.zeros(n_levels) for k in tree.uf.num_weights.keys()}
+    sizes = {k: np.zeros(n_levels) for k in tree.uf.num_weights.keys()}
+    
+    # for k, v in sizes_level.items():
+    #     if k in sizes.keys():
+    #         sizes[k] += v
+    #     else:
+    #         sizes[update_map[k]] += v
+    for k, v in sizes_level.items():
+        if k in sizes.keys():
+            sizes[k] += v
+        else:
+            sizes[update_map[k]] += v
+    for k, v in w_squared_level.items():
+        if k in w_squared.keys():
+            w_squared[k] += v
+        else:
+            w_squared[update_map[k]] += v
+    for k, v in wt_level.items():
+        if k in wt.keys():
+            wt[k] += v
+        else:
+            wt[update_map[k]] += v
+
+    return (w_squared, wt, sizes)
 
 
 def calculate_sizes_level(X, tree):

@@ -49,7 +49,8 @@ class UnionFind:
         self.parent_pointers = {}
         self.num_to_objects = {}
         self.objects_to_num = {}
-        self.__repr__ = self.__str__
+        # self.__repr__ = self.__str__
+        self.counter = 0
 
     def insert_objects(self, objects, **kwargs):
         '''
@@ -67,7 +68,13 @@ class UnionFind:
         value = 1
         
         if object not in self.objects_to_num:
-            obj_num = len(self.objects_to_num)
+            # obj_num = len(self.objects_to_num)
+            obj_num = self.counter
+            # if object == (3, 199, 85) and self.counter > 40000:
+            #     raise ValueError
+            # if object == (4, 196, 83):
+            #     print "counter: ", self.counter
+            self.counter += 1
             self.num_weights[obj_num] = value
             self.objects_to_num[object] = obj_num
             self.num_to_objects[obj_num] = object
@@ -75,11 +82,26 @@ class UnionFind:
             return object
         stk = [self.objects_to_num[object]]
         par = self.parent_pointers[stk[-1]]
+        # if object == (3, 199, 85):
+        #     print "find (): stk, par = ", stk, par, "\n   object: ", object
+        #     # raise ValueError('Found illegal entry')
+        #     print "stk created with: ", self.objects_to_num[object]
+        #     print stk, par
+            # print 'children of 34477: ', [k for k, v in self.parent_pointers.items() if v == 34477]
+            # print 'element 34477: ', self.num_to_objects[34477]
+            # print 'parent of 34477: ', self.find(self.num_to_objects[34477])
         while par != stk[-1]:
+            # try:
             stk.append(par)
             par = self.parent_pointers[par]
+            # except KeyError:
+            #     print par
+            #     print "counter: ", self.counter
+            #     raise
         for i in stk:
             self.parent_pointers[i] = par
+        # if object == (3, 199, 85):
+        #     print '   parent: ', self.num_to_objects[par]
         return self.num_to_objects[par]
 
     def union(self, object1, object2, elder_rule=False):
@@ -107,22 +129,22 @@ class UnionFind:
             del self.num_weights[on2]
             self.parent_pointers[on2] = on1
 
-    def __str__(self):
-        '''
-        Included for testing purposes only.
-        All information needed from the union find data structure can be attained
-        using find.
-        '''
-        sets = {}
-        for i in xrange(len(self.objects_to_num)):
-            sets[i] = []
-        for i in self.objects_to_num:
-            sets[self.objects_to_num[self.find(i)]].append(i)
-        out = []
-        for i in sets.itervalues():
-            if i:
-                out.append(repr(i))
-        return ', '.join(out)
+    # def __str__(self):
+    #     '''
+    #     Included for testing purposes only.
+    #     All information needed from the union find data structure can be attained
+    #     using find.
+    #     '''
+    #     sets = {}
+    #     for i in xrange(len(self.objects_to_num)):
+    #         sets[i] = []
+    #     for i in self.objects_to_num:
+    #         sets[self.objects_to_num[self.find(i)]].append(i)
+    #     out = []
+    #     for i in sets.itervalues():
+    #         if i:
+    #             out.append(repr(i))
+    #     return ', '.join(out)
 
 
 class UnionFindOpt(object):

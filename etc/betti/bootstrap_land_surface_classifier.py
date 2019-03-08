@@ -122,7 +122,7 @@ def parse_args():
         '--clf', help='Classifier to use: kNN or logistic regression.',
         choices=['knn', 'logistic'], required=True)
     ap.add_argument('-C', help='Regularization value for logistic regression.',
-                    default=1.0)
+                    default=1.0, type=float)
     ap.add_argument(
         '--all-c', help='Use all values of C in a pre-defined range',
         action='store_true')
