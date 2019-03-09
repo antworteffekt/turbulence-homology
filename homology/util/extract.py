@@ -55,23 +55,32 @@ def write_cubes(X, out_fname, pos_value=1, **kwargs):
     outfile.close()
 
 
-def write_cubes_timeblock(X, pos_value, out_fname, **kwargs):
+def write_cubes_3d(X, out_fname, append=False, z_0=0, pos_value=1, **kwargs):
     """
     Given a three dimensional numpy array write the corresponding list of cubes
     to disk.
     """
-    # just assume that 100 is the target value for now
-    X_ = np.where(X == pos_value)
-    # create the string object with the appropriate data
-    X_ = str(list(zip(X_[0], X_[1], X_[2])))
-    # clean up the string a bit
-    X_ = X_.replace('[', '').replace(']', '')
-    X_ = X_.replace('), ', ')\n')
-    X_ = 'dimension 3\n' + X_
-    # write to file
-    outfile = open(out_fname, 'w')
-    outfile.write(X_)
-    outfile.close()
+    if append:
+        X_ = list(zip(*np.where(X == pos_value)))
+        X_ = '\n' + str([x for x in X_ if x[0] == z_0])
+        # clean up the string a bit
+        X_ = X_.replace('[', '').replace(']', '')
+        X_ = X_.replace('), ', ')\n')
+        outfile = open(out_fname, 'a')
+        outfile.write(X_)
+        outfile.close()
+    else:
+        X_ = np.where(X == pos_value)
+        # create the string object with the appropriate data
+        X_ = str(list(zip(X_[0], X_[1], X_[2])))
+        # clean up the string a bit
+        X_ = X_.replace('[', '').replace(']', '')
+        X_ = X_.replace('), ', ')\n')
+        X_ = 'dimension 3\n' + X_
+        # write to file
+        outfile = open(out_fname, 'w')
+        outfile.write(X_)
+        outfile.close()
 
 
 def calculate_betti_numbers(fname, periodic=False, dims=(100,100)):
@@ -85,7 +94,11 @@ def calculate_betti_numbers(fname, periodic=False, dims=(100,100)):
     n_lines = int(n_lines.split(' ')[0])
     if n_lines > 1:
         if periodic:
-            command_string = 'chomp -w %d -w %d %s' % (dims[0], dims[1], fname)
+            if len(dims) == 2:
+                command_string = 'chomp -w %d -w %d %s' % (dims[0], dims[1], fname)
+            elif len(dims) == 3:
+                command_string = 'chomp -w 0 -w %d -w %d %s' % (
+                    dims[1], dims[2], fname)
         else:
             command_string = 'chomp %s' % fname
         args = shlex.split(command_string)
