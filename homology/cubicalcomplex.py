@@ -39,7 +39,7 @@ class CubicalComplex:
                           ((p[0] + 1, p[1]), (p[0] + 1, p[1] + 1))])
         return list(set(edges))
 
-    def plot(self, ax=None, **kwargs):
+    def plot(self, ax=None, alpha=0.3, **kwargs):
 
         if ax is None:
             f = plt.figure()
@@ -53,7 +53,5 @@ class CubicalComplex:
             sp.plot((l[0][0], l[1][0]), (l[0][1], l[1][1]),
                     color='black', lw=1.5)
         for p in self.anchor_points:
-            rect = plt.Rectangle((p[0], p[1]), 1, 1, color='black', alpha=0.3)
+            rect = plt.Rectangle((p[0], p[1]), 1, 1, color='black', alpha=alpha)
             sp.add_patch(rect)
-        # if ax is not None:
-        #     return sp
