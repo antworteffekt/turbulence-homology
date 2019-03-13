@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 
 class CubicalComplex:
 
-    cubes = {}
-
     def __init__(self, dim=2):
+        self.cubes = {}
         self.anchor_points = None
         if dim > 2:
             raise NotImplementedError("Dimensions > 2 not yet implemented!")
@@ -40,9 +39,13 @@ class CubicalComplex:
                           ((p[0] + 1, p[1]), (p[0] + 1, p[1] + 1))])
         return list(set(edges))
 
-    def plot(self, **kwargs):
-        f = plt.figure()
-        sp = f.add_subplot(111, aspect='equal')
+    def plot(self, ax=None, **kwargs):
+
+        if ax is None:
+            f = plt.figure()
+            sp = f.add_subplot(111, aspect='equal')
+        else:
+            sp = ax
         sp.axis('off')
         sp.plot(self.cubes[0][:, 0], self.cubes[0][
                 :, 1], 'o', color='black', **kwargs)
@@ -52,4 +55,5 @@ class CubicalComplex:
         for p in self.anchor_points:
             rect = plt.Rectangle((p[0], p[1]), 1, 1, color='black', alpha=0.3)
             sp.add_patch(rect)
-#         return f
+        # if ax is not None:
+        #     return sp
