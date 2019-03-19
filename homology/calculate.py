@@ -39,7 +39,7 @@ def vertical_profiles(filename, variable, out_dir, z_dim_name, t_value, domain='
 
     t = t_value
     # for t in t_values:
-    print "Timestep %d" % t
+    print("Timestep %d" % t)
     Xt = dataset[variable][t, :, :, :]
     if rescale:
         Xt = Xt * dataset[variable].var_scale_factor + dataset[variable].var_add_offset
@@ -60,7 +60,7 @@ def vertical_profiles(filename, variable, out_dir, z_dim_name, t_value, domain='
             profiles_1[0, z] = betti[1]
 
     elapsed_time = time.time() - start_time
-    print "done. Time elapsed: %.3f" % elapsed_time
+    print("done. Time elapsed: %.3f" % elapsed_time)
     dataset.close()
     return (profiles_0, profiles_1)
 
@@ -80,7 +80,7 @@ def xz_profiles(filename, variable, y_dim_name, t_dim_name, **kwargs):
 
     for t in range(t_range):
         # for t in range(2):
-        print "timestep %d" % t
+        print( "timestep %d" % t)
         Xt = dataset[t, :, :, :]
         for y in range(y_range):
             X = Xt[:, :, y]

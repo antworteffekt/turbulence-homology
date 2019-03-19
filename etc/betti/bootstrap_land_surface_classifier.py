@@ -1,10 +1,8 @@
-from __future__ import print_function
-
 import numpy as np
 from argparse import ArgumentParser
 import os
 import sys
-import cPickle as pickle
+import pickle
 import matplotlib.pyplot as plt
 
 from sklearn.neighbors import KNeighborsClassifier

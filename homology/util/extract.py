@@ -105,7 +105,6 @@ def calculate_betti_numbers(fname, periodic=False, dims=(100,100)):
         betti_numbers = subprocess.check_output(args).decode('utf-8')
         return [int(x) for x in betti_numbers.split(' ')]
     else:
-        print('None...')
         return None
 
 def persistence_intervals_to_array(filename):
