@@ -53,5 +53,29 @@ class CubicalComplex:
             sp.plot((l[0][0], l[1][0]), (l[0][1], l[1][1]),
                     color='black', lw=1.5)
         for p in self.anchor_points:
-            rect = plt.Rectangle((p[0], p[1]), 1, 1, color='black', alpha=alpha)
+            rect = plt.Rectangle((p[0], p[1]), 1, 1,
+                                 color='black', alpha=alpha)
+            sp.add_patch(rect)
+
+
+class ColoredCubicalComplex(CubicalComplex):
+
+    def __init__(self):
+        CubicalComplex.__init__(self)
+
+    def plot(self, color='black', ax=None, alpha=0.3, **kwargs):
+
+        if ax is None:
+            f = plt.figure()
+            sp = f.add_subplot(111, aspect='equal')
+        else:
+            sp = ax
+        sp.axis('off')
+        sp.plot(self.cubes[0][:, 0], self.cubes[0][
+                :, 1], 'o', color=color, **kwargs)
+        for l in self.cubes[1]:
+            sp.plot((l[0][0], l[1][0]), (l[0][1], l[1][1]),
+                    color=color, lw=1.5)
+        for p in self.anchor_points:
+            rect = plt.Rectangle((p[0], p[1]), 1, 1, color=color, alpha=alpha)
             sp.add_patch(rect)
