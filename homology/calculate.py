@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import os
 import numpy as np
 import time
 from netCDF4 import Dataset
@@ -22,15 +22,44 @@ def binarize_array(X, threshold):
     return X
 
 
-def vertical_profiles(filename, variable, out_dir, z_dim_name, t_value, domain='pos', rescale=False, **kwargs):
+def extract_data(model, variable, t):
+
+    if model == 'dns':
+        fname_root = '/media/licon/1650BDF550BDDBA5/CBL3D_Data_Cedrick/MEDIUM'
+        if variable == 'buoy_flux':
+            fname_w = 'cbl3d_it85900-91000_y_wind_subsampled_3d_x1-512_y1-512.nc'
+            fname_b = 'cbl3d_it85900-91000_air_temperature_anomaly_subsampled_3d_x1-512_y1-512.nc'
+            data_w = Dataset(os.path.join(fname_root, fname_w), 'r')
+            data_b = Dataset(os.path.join(fname_root, fname_b), 'r')
+
+            W = data_w['y_wind'][t] * data_w['y_wind'].var_scale_factor + data_w['y_wind'].var_add_offset
+            B = data_b['air_temperature_anomaly'][t] * data_b['air_temperature_anomaly'].var_scale_factor + data_b['air_temperature_anomaly'].var_add_offset
+            X = W * B
+            return X
+
+        elif variable == 'w':
+            varname = 'y_wind'
+            fname = 'cbl3d_it85900-91000_y_wind_subsampled_3d_x1-512_y1-512.nc'
+            dataset = Dataset(os.path.join(fname_root, fname), 'r')
+
+        elif variable == 'buoy':
+            varname = 'air_temperature_anomaly'
+            fname = 'cbl3d_it85900-91000_air_temperature_anomaly_subsampled_3d_x1-512_y1-512.nc'
+            dataset = Dataset(os.path.join(fname_root, fname), 'r')
+
+        X = dataset[varname][t] * dataset[varname].var_scale_factor + dataset[varname].var_add_offset
+        dataset.close()
+        return X
+
+
+
+def vertical_profiles(filename, variable, out_fname, z_dim_name, t_value,
+                      domain='pos', rescale=False, center=False, threshold=0,
+                      periodic=False):
     dataset = Dataset(filename, 'r')
     # dataset = dataset_full[variable]
 
     z_range = dataset[variable].shape[dataset[variable].dimensions.index(z_dim_name)]
-
-    threshold = kwargs.get('threshold', 0)
-    periodic = kwargs.get('periodic', False)
-    out_fname = out_dir + 'tmp.txt'
 
     start_time = time.time()
 
@@ -45,6 +74,8 @@ def vertical_profiles(filename, variable, out_dir, z_dim_name, t_value, domain='
         Xt = Xt * dataset[variable].var_scale_factor + dataset[variable].var_add_offset
     for z in range(z_range):
         X = np.array(Xt[z, :, :])
+        if center:
+            X = X - np.mean(X)
         if domain == 'pos':
             X = X > threshold
         elif domain == 'neg':
@@ -52,7 +83,6 @@ def vertical_profiles(filename, variable, out_dir, z_dim_name, t_value, domain='
         else:
             raise ValueError('Unknown domain type %s' % domain)
         dims = X.shape
-        # "positive" domain: X == 1
         write_cubes(X, out_fname, pos_value=1)
         betti = calculate_betti_numbers(out_fname, periodic, dims)
         if betti is not None:
