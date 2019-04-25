@@ -52,24 +52,24 @@ class MergeTree(object):
                 # we assume a two-dimensional array structure
                 # Periodicity should affect only the lookup of the cell "behind".
                 if periodic:
-                    behind = map(lambda x, y: x + y, it.multi_index, (0, -1))
+                    behind = tuple(map(lambda x, y: x + y, it.multi_index, (0, -1)))
                     # Map the column index to its residue mod n_columns.
                     behind = (behind[0], behind[1] % X.shape[1])
-                    if X[tuple(behind)]:
-                        self.uf.union(it.multi_index, tuple(behind), elder_rule=False)
+                    if X[behind]:
+                        self.uf.union(it.multi_index, behind, elder_rule=False)
                 else:
-                    behind = map(lambda x, y: x + y, it.multi_index, (0, -1))
-                    if not any(n < 0 for n in behind) and X[tuple(behind)]:
-                        self.uf.union(it.multi_index, tuple(behind), elder_rule=False)
+                    behind = tuple(map(lambda x, y: x + y, it.multi_index, (0, -1)))
+                    if not any(n < 0 for n in behind) and X[behind]:
+                        self.uf.union(it.multi_index, behind, elder_rule=False)
 
-                below = map(lambda x, y: x + y, it.multi_index, (-1, 0))
-                if not any(n < 0 for n in below) and X[tuple(below)]:
+                below = tuple(map(lambda x, y: x + y, it.multi_index, (-1, 0)))
+                if not any(n < 0 for n in below) and X[below]:
                     # Don't do the union here, just keep track of the involved
                     # elements instead.
                     # Get cell's parent in this level
                     cell_parent = self.uf.find(it.multi_index)
                     # Get root of cell below
-                    below_parent = self.uf.find(tuple(below))
+                    below_parent = self.uf.find(below)
                     if cell_parent not in below_joins:
                         below_joins[cell_parent] = [tuple(below_parent)]
                     else:
@@ -77,7 +77,7 @@ class MergeTree(object):
 
             it.iternext()
             if it.finished or it.multi_index[0] != current_level:
-                for level_parent, below_parent in below_joins.iteritems():
+                for level_parent, below_parent in below_joins.items():
                     if len(set(below_parent)) > 1:
                         # Get the roots for the objects below
                         roots_below = list(set(below_parent))
@@ -177,33 +177,33 @@ class MergeTree(object):
                 self.uf.insert_objects([it.multi_index], value=X[it.multi_index])
 
                 if periodic:
-                    behind = map(lambda x, y: x + y, it.multi_index, (0, 0, -1))
+                    behind = tuple(map(lambda x, y: x + y, it.multi_index, (0, 0, -1)))
                     behind = (behind[0], behind[1], behind[2] % X.shape[2])
-                    if X[tuple(behind)]:
-                        self.uf.union(it.multi_index, tuple(behind), elder_rule=False)
+                    if X[behind]:
+                        self.uf.union(it.multi_index, behind, elder_rule=False)
 
-                    side = map(lambda a, b: a + b, it.multi_index, (0, -1, 0))
+                    side = tuple(map(lambda a, b: a + b, it.multi_index, (0, -1, 0)))
                     side = (side[0], side[1] % X.shape[1], side[2])
-                    if X[tuple(side)]:
-                        self.uf.union(it.multi_index, tuple(side), elder_rule=False)
+                    if X[side]:
+                        self.uf.union(it.multi_index, side, elder_rule=False)
                 else:
                     # Check for connectivity behind, below, and to one side - this assumes 
                     # six connectivity
-                    behind = map(lambda x, y: x + y, it.multi_index, (0, 0, -1))
-                    if not any(n < 0 for n in behind) and X[tuple(behind)]:
-                        self.uf.union(it.multi_index, tuple(behind), elder_rule=False)
+                    behind = tuple(map(lambda x, y: x + y, it.multi_index, (0, 0, -1)))
+                    if not any(n < 0 for n in behind) and X[behind]:
+                        self.uf.union(it.multi_index, behind, elder_rule=False)
 
-                    side = map(lambda a, b: a + b, it.multi_index, (0, -1, 0))
-                    if not any(n < 0 for n in side) and X[tuple(side)]:
-                        self.uf.union(it.multi_index, tuple(side), elder_rule=False)
+                    side = tuple(map(lambda a, b: a + b, it.multi_index, (0, -1, 0)))
+                    if not any(n < 0 for n in side) and X[side]:
+                        self.uf.union(it.multi_index, side, elder_rule=False)
 
-                below = map(lambda x, y: x + y, it.multi_index, (-1, 0, 0))
-                if not any(n < 0 for n in below) and X[tuple(below)]:
+                below = tuple(map(lambda x, y: x + y, it.multi_index, (-1, 0, 0)))
+                if not any(n < 0 for n in below) and X[below]:
                     # Don't do the union here, just keep track of the involved elements instead.
                     # Get cell's parent in this level
                     cell_parent = self.uf.find(it.multi_index)
                     # Get root of cell below
-                    below_parent = self.uf.find(tuple(below))
+                    below_parent = self.uf.find(below)
                     if cell_parent not in below_joins:
                         below_joins[cell_parent] = [tuple(below_parent)]
                     else:
@@ -212,7 +212,7 @@ class MergeTree(object):
             it.iternext()
             if it.finished or it.multi_index[0] != current_level:
                 # Level empty, store merger information
-                for level_parent, below_parent in below_joins.iteritems():
+                for level_parent, below_parent in below_joins.items():
                     if len(set(below_parent)) > 1:
                         # Get the roots for the objects below
                         roots_below = list(set(below_parent))
@@ -344,10 +344,10 @@ class MergeTree(object):
         """
         # First invert the dict parent_pointers
         child_nodes = {}
-        for k, v in self.uf.parent_pointers.iteritems():
+        for k, v in self.uf.parent_pointers.items():
             keys = child_nodes.setdefault(v, [])
             keys.append(k)
-        return {k : len(v) for k, v in child_nodes.iteritems()}
+        return {k : len(v) for k, v in child_nodes.items()}
 
     def mergers_per_level(self):
         """
@@ -362,9 +362,9 @@ class MergeTree(object):
     def plot(self):
         fig = plt.figure()
         ax = plt.axes()
-        for k, d in self.components_level.iteritems():
+        for k, d in self.components_level.items():
             ax.vlines(k[1], d[0], d[-1])
-        for k, d in self.mergers.iteritems():
+        for k, d in self.mergers.items():
             xmin = min(k[1], d[1][1])
             xmax = max(k[1], d[1][1])
             ax.hlines(d[0] + 1, xmin, xmax)
