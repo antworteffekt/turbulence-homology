@@ -147,8 +147,6 @@ class MergeTree(object):
                                 G.add_edge(cell, end_node)
                 # Reset the below_joins dictionary
                 below_joins.clear()
-                # print "Level %d done" % current_level
-                # print "Components present: ", self.levels_components[current_level]
             # End if
         # End while (going through horizontal levels)
 

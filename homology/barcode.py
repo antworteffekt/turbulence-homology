@@ -10,8 +10,9 @@ from homology.interval import Interval
 import re
 from collections import OrderedDict
 import numpy as np
+import matplotlib.pyplot as plt
 import subprocess
-import StringIO
+import io
 
 class Barcode:
 
@@ -63,11 +64,11 @@ class Barcode:
     def compute(self, data, dim=1, data_format='point-cloud'):
         # Compute and parse in one call
         intervals = self.persistence_intervals(data, '/home/licon/src/ripser/ripser', dim, data_format)
-        self.parse_ripser_output(intervals)
+        self.parse_ripser_output(intervals.decode('utf-8'))
 
     def persistence_intervals(self, X, ripser_bin, dim, data_format='point-cloud'):
     
-        x_str = StringIO.StringIO()
+        x_str = io.StringIO()
         np.savetxt(x_str, X, delimiter=',')
         # Validate data format
         if not data_format in ['point-cloud', 'distance']:
@@ -75,7 +76,7 @@ class Barcode:
         args = [ripser_bin, '--format', data_format, '--dim', str(dim)]
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
                              stderr=subprocess.STDOUT)
-        ripser_out = p.communicate(input=x_str.getvalue())[0]
+        ripser_out = p.communicate(input=x_str.getvalue().encode())[0]
         return ripser_out
 
     def parse_ripser_output(self, barcode_str):
@@ -125,7 +126,7 @@ class Barcode:
                 intervals = inf_intervals + intervals
             self.intervals[identifier] = intervals
 
-    def plot(self, ax, dimensions=None, plot_infinite_intervals=False):
+    def plot(self, ax=None, dimensions=None, plot_infinite_intervals=False):
         # Requires a dict of lists as produced by extract.parse_output
         # colors = ['tab:red', 'tab:blue',
         #           'tab:purple', 'tab:green', 'tab:orange']
@@ -134,6 +135,10 @@ class Barcode:
                   2: 'tab:purple',
                   3: 'tab:green',
                   4: 'tab:orange'}
+
+        if ax is None:
+            f = plt.figure()
+            ax = f.add_subplot(111, aspect='auto')
 
         if plot_infinite_intervals:
             ax.set_xlim([self.value_range[0], self.value_range[1]])
@@ -148,7 +153,7 @@ class Barcode:
             # Plot intervals in all dimensions
             n_intervals = sum([len(v) for k, v in self.intervals.items()])
             ax.set_ylim([-5, n_intervals + 1])
-            for k, d in self.intervals.iteritems():
+            for k, d in self.intervals.items():
                 identifier = 'dim %s' % k
                 for interval in d:
                     if len(interval) == 1 and plot_infinite_intervals:
@@ -164,7 +169,7 @@ class Barcode:
             subintervals = {k: self.intervals[k] for k in dimensions if k in self.intervals}
             n_intervals = sum([len(v) for k, v in subintervals.items()])
             ax.set_ylim([-5, n_intervals + 1])
-            for k, d in subintervals.iteritems():
+            for k, d in subintervals.items():
                 identifier = 'dim %s' % k
                 for interval in d:
                     if len(interval) == 1 and plot_infinite_intervals:
@@ -210,11 +215,11 @@ class Barcode:
         try:
             if not bool(self.additive_persistence):
                 self.additive_persistence = {
-                    k : np.sort(np.array([x[1] - x[0] for x in v if len(x) > 1])) for k, v in self.intervals.iteritems()
+                    k : np.sort(np.array([x[1] - x[0] for x in v if len(x) > 1])) for k, v in self.intervals.items()
                 }
         except AttributeError:
             self.additive_persistence = {
-                    k : np.sort(np.array([x[1] - x[0] for x in v if len(x) > 1])) for k, v in self.intervals.iteritems()
+                    k : np.sort(np.array([x[1] - x[0] for x in v if len(x) > 1])) for k, v in self.intervals.items()
                 }
         ys = np.sum(self.additive_persistence[dim] > xs[:, None], axis=1)
         return ys
@@ -227,11 +232,11 @@ class Barcode:
         try:
             if not bool(self.multiplicative_persistence):
                 self.multiplicative_persistence = {
-                    k : [x[1] / x[0] for x in v if x[0] > 1e-10] for k, v in self.intervals.iteritems() if k > 0
+                    k : [x[1] / x[0] for x in v if x[0] > 1e-10] for k, v in self.intervals.items() if k > 0
                 }
         except AttributeError:
             self.multiplicative_persistence = {
-                    k : [x[1] / x[0] for x in v if x[0] > 1e-10] for k, v in self.intervals.iteritems() if k > 0
+                    k : [x[1] / x[0] for x in v if x[0] > 1e-10] for k, v in self.intervals.items() if k > 0
                 }
 
         ys = np.sum(self.multiplicative_persistence[dim] > xs[:, None], axis=1)
