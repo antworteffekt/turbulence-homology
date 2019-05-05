@@ -34,10 +34,10 @@ def connected_components(qc, grid_fname):
     return uf
 
 
-def sample_points(points_array, sample_ratio=0.05):
+def sample_points(prng, points_array, sample_ratio=0.05):
     n_points = points_array.shape[0]
     sample_size = ceil(sample_ratio * n_points)
-    sample = np.random.choice(points_array, size=sample_size, replace=False)
+    sample = prng.choice(points_array, size=sample_size, replace=False)
     return(sample)
 
 
